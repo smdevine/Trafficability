@@ -238,3 +238,19 @@ for(i in 1:length(soil_data)) {
 }
 
 #write file paths and run.bat file
+#5509 soils to model
+#copy path1 level_01.dir
+#H1D_CALC
+paths_shortcut <- paste0('path', 1:5509)
+runbat <- file(file.path(modelDir, 'run.bat.txt'), 'w')
+for (i in seq_along(paths_shortcut)) {
+  writeLines(paste('copy', paths_shortcut[i], 'level_01.dir'), con = runbat)
+  writeLines('H1D_CALC', con = runbat)
+}
+close(runbat)
+
+for (i in seq_along(paths_shortcut)) {
+  filepth <- file(file.path(modelDir, 'paths', paths_shortcut[i]), 'w')
+  writeLines(file.path('D:\PostDoc\Trafficability\Oct2020test', names(soil_data)[i], names(soil_data)[i], fsep='\\'), con = filepth)
+  close(filepth)
+}
