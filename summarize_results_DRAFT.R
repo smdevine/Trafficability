@@ -55,7 +55,23 @@ length(soil_data) #5509 now
 final_cokeys <- as.integer(gsub('soil_', '', names(soil_data)))
 
 horizons_modeled <- mod_database[mod_database$cokey %in% final_cokeys, ]
-depths(horizons_modeled) <- cokey ~ hzn_top + hzn_bot
+
+
+#add h and theta @ FC info
+theta_fc_est <- function(theta_s, theta_r, Ks, n) {
+  (n^(-0.6*(2+log10(Ks))))*(theta_s - theta_r) + theta_r
+}
+vg_theta <- function(theta_r, theta_s, alpha, n, h) {
+  theta_r + (theta_s - theta_r) / (1 + (alpha * h)^n)^(1-1/n)
+}
+find_h_at_theta_fc <- function(h, theta_r, theta_s, alpha, n, theta_fc){
+  abs(theta_fc  - theta_r - ((theta_s - theta_r) / (1 + (alpha * h)^n)^(1-1/n)))
+}
+
+horizons_modeled$theta_fc <- theta_fc_est(horizons_modeled$teta_s, horizons_modeled$teta_r, horizons_modeled$Ks..cm.d., horizons_modeled$n)
+
+horizons_modeled$h_fc <- -sapply(1:nrow(horizons_modeled), function(i) { optimize(find_h_at_theta_fc, interval = c(10,10000), theta_r = horizons_modeled$teta_r[i], theta_s = horizons_modeled$teta_s[i], alpha = horizons_modeled$alpha..1.cm.[i], n=horizons_modeled$n[i], theta_fc=horizons_modeled$theta_fc[i])$minimum})
+summary(horizons_modeled$h_fc)
 
 wtd.mean_v2 <- function(x, y) {
   # use horizon thickness as a weight
@@ -65,7 +81,7 @@ wtd.mean_v2 <- function(x, y) {
   m
 }
 
-depth_X_properties <- function(horizon_SPC, depth, vars_of_interest = c('clay', 'silt', 'sand', 'estimated_oc', 'db_13b', 'wr_13b', 'wr_15b', 'Ks..cm.d.', 'K0.cm.d.', 'teta_r', 'teta_s', 'alpha..1.cm.', 'n'), varnames = c('clay', 'silt', 'sand', 'oc', 'bd_13b', 'theta_0.33b', 'theta_15b', 'ksat', 'f_ksat', 'theta_r', 'theta_s', 'alpha', 'n')) { #lep is linear extensibility
+depth_X_properties <- function(horizon_SPC, depth, vars_of_interest = c('clay', 'silt', 'sand', 'estimated_oc', 'db_13b', 'wr_13b', 'wr_15b', 'Ks..cm.d.', 'K0.cm.d.', 'teta_r', 'teta_s', 'alpha..1.cm.', 'n', 'theta_fc', 'h_fc'), varnames = c('clay', 'silt', 'sand', 'oc', 'bd_13b', 'theta_0.33b', 'theta_15b', 'ksat', 'f_ksat', 'theta_r', 'theta_s', 'alpha', 'n', 'theta_fc', 'h_fc')) { #lep is linear extensibility
   columnames <- paste0(varnames, '_', depth, 'cm')
   print(cbind(vars_of_interest, columnames)) #show that it's all lined up
   assign("depth", depth, envir = .GlobalEnv) #this necessary because slice can't find the variable otherwise
@@ -82,10 +98,14 @@ depth_X_properties <- function(horizon_SPC, depth, vars_of_interest = c('clay', 
   s
 }
 
+#create spc object
+depths(horizons_modeled) <- cokey ~ hzn_top + hzn_bot
 
 soils_modeled_30cm <- depth_X_properties(horizon_SPC = horizons_modeled, depth = 30)
-
 dim(soils_modeled_30cm)
+
+soils_modeled_10cm <- depth_X_properties(horizon_SPC = horizons_modeled, depth = 10)
+dim(soils_modeled_10cm)
 
 #check textural class--function taken from ssurgo_allCA_aggregation_awc_r.R
 textural.class.calc <- function(sand, silt, clay) {
@@ -119,7 +139,7 @@ sum(soils_modeled_30cm$texture.sums > 100.1 | soils_modeled_30cm$texture.sums < 
 soils_modeled_30cm$textural_class <- textural.class.calc(sand = soils_modeled_30cm$sand_30cm, silt = soils_modeled_30cm$silt_30cm, clay = soils_modeled_30cm$clay_30cm)
 table(soils_modeled_30cm$textural_class)
 soils_modeled_30cm[soils_modeled_30cm$cokey==2688,]
-write.csv(soils_modeled_30cm, file.path(tablesDir, 'soils_modeled_0_30cm_properties.csv'))
+# write.csv(soils_modeled_30cm, file.path(tablesDir, 'soils_modeled_0_30cm_properties.csv'))
 
 #condense trafficability results from HYDRUS runs
 fnames_results <- list.files(summaryDir, full.names = FALSE, recursive = FALSE)
@@ -132,12 +152,13 @@ tail(cokeys_modeled) #5494 because 15 soils produced error messages
 length(cokeys_modeled)
 extract_0_10cm_trafficability <- function(x) {
   results <- read.csv(file.path(summaryDir, x), row.names=1)
-  results[3,]
+  results[4,]
 }
 trafficability_0_10cm <- do.call(rbind, lapply(fnames_results, extract_0_10cm_trafficability))
 dim(trafficability_0_10cm)
 head(trafficability_0_10cm)
 row.names(trafficability_0_10cm) <- cokeys_modeled
+trafficability_0_10cm[,1:4] <- lapply(trafficability_0_10cm[,1:4], function(x) as.numeric(x))
 lapply(trafficability_0_10cm, function(x) sum(is.na(x)))
 write.csv(trafficability_0_10cm, file.path(tablesDir, 'trafficability_0_10cm_allSoils.csv'), row.names = TRUE)
 trafficability_0_10cm$textural_class_30cm <- soils_modeled_30cm$textural_class[match(row.names(trafficability_0_10cm), soils_modeled_30cm$cokey)]
@@ -155,8 +176,6 @@ trafficability_0_10cm$theta_15b_30cm <- soils_modeled_30cm$theta_15b_30cm[match(
 trafficability_0_10cm$rosetta.model <- mod_database$Roseta.model[match(row.names(trafficability_0_10cm), mod_database$cokey)]
 trafficability_0_10cm$soil_name <- mod_database$taxonname[match(row.names(trafficability_0_10cm), mod_database$cokey)]
 
-
-trafficability_0_10cm[,1:4] <- lapply(trafficability_0_10cm[,1:4], function(x) as.numeric(x))
 tapply(trafficability_0_10cm$FC_0.9, trafficability_0_10cm$textural_class_30cm, mean, na.rm=TRUE)
 tapply(trafficability_0_10cm$FC_0.9, trafficability_0_10cm$textural_class_30cm, summary)
 tapply(trafficability_0_10cm$FC_0.95, trafficability_0_10cm$textural_class_30cm, mean, na.rm=TRUE)
@@ -164,13 +183,22 @@ tapply(trafficability_0_10cm$FC_0.9, trafficability_0_10cm$rosetta.model, mean, 
 table(trafficability_0_10cm$rosetta.model)
 #2    3    5 
 #344   10 5140 
-sum(!is.na(trafficability_0_10cm$FC_0.9) & trafficability_0_10cm$rosetta.model==5 & !is.na(trafficability_0_10cm$textural_class_30cm)) #4938
+sum(!is.na(trafficability_0_10cm$FC_0.9) & trafficability_0_10cm$rosetta.model==5 & !is.na(trafficability_0_10cm$textural_class_30cm)) #4990
 
 #only consider rosetta model 5
-trafficability_0_10cm <- trafficability_0_10cm[trafficability_0_10cm$rosetta.model==5,]
-dim(trafficability_0_10cm) #5140
+# trafficability_0_10cm <- trafficability_0_10cm[trafficability_0_10cm$rosetta.model==5,]
+# dim(trafficability_0_10cm) #5140
+lapply(trafficability_0_10cm, function(x) sum(is.na(x)))
+(5494-134)/5509 #97.3 % of all initial profiles returned results for 90% FC of 0-10 cm soil
 soil_name_counts <- table(trafficability_0_10cm$soil_name)[order(table(trafficability_0_10cm$soil_name), decreasing=TRUE)]
 soil_name_mas30 <- soil_name_counts[soil_name_counts >= 30]
+
+#find unusual results
+sum(trafficability_0_10cm$FC_0.9 > 20 & trafficability_0_10cm$textural_class_30cm=='sandy loam', na.rm = TRUE) #4 sandy loams greater than 20 days
+trafficability_0_10cm[trafficability_0_10cm$FC_0.9 > 20 & trafficability_0_10cm$textural_class_30cm=='sandy loam' & !is.na(trafficability_0_10cm$FC_0.9),]
+mean(trafficability_0_10cm$alpha_30cm[trafficability_0_10cm$textural_class_30cm=='sandy loam'], na.rm=TRUE)
+mean(trafficability_0_10cm$theta_0.33b_30cm[trafficability_0_10cm$textural_class_30cm=='sandy loam'], na.rm=TRUE)
+mean(trafficability_0_10cm$theta_15b_30cm[trafficability_0_10cm$textural_class_30cm=='sandy loam'], na.rm=TRUE)
 
 soilname_summary <- do.call(cbind, lapply(names(soil_name_mas30), function(x) as.matrix(summary(trafficability_0_10cm$FC_0.9[trafficability_0_10cm$soil_name==x]))[1:6,]))
 colnames(soilname_summary) <- names(soil_name_mas30) 
@@ -201,10 +229,10 @@ plot(trafficability_0_10cm$silt_30cm, trafficability_0_10cm$FC_0.9)
 plot(trafficability_0_10cm$theta_0.33b_30cm, trafficability_0_10cm$FC_0.9)
 plot(trafficability_0_10cm$theta_15b_30cm, trafficability_0_10cm$FC_0.9)
 
-summary(lm(FC_0.9 ~ clay_30cm, data = trafficability_0_10cm)) #Multiple R-squared:  0.4762
-summary(lm(FC_0.9 ~ clay_30cm+sand_30cm, data = trafficability_0_10cm)) #Multiple R-squared:  0.4813
-summary(lm(FC_0.9 ~ clay_30cm+sand_30cm+bd_30cm, data = trafficability_0_10cm)) #Multiple R-squared:  0.5059
-summary(lm(FC_0.9 ~ clay_30cm+sand_30cm+bd_30cm+theta_0.33b_30cm, data = trafficability_0_10cm)) #Multiple R-squared:  0.5844
-summary(lm(FC_0.9 ~ clay_30cm+sand_30cm+bd_30cm+theta_0.33b_30cm+theta_15b_30cm, data = trafficability_0_10cm)) #Multiple R-squared:  0.5988
+summary(lm(FC_0.9 ~ clay_30cm, data = trafficability_0_10cm)) #Multiple R-squared:  0.4762 if rosetta model 5
+summary(lm(FC_0.9 ~ clay_30cm+sand_30cm, data = trafficability_0_10cm)) #Multiple R-squared:  0.4813 if rosetta model 5
+summary(lm(FC_0.9 ~ clay_30cm+sand_30cm+bd_30cm, data = trafficability_0_10cm)) #Multiple R-squared:  0.5059 if rosetta model 5
+summary(lm(FC_0.9 ~ clay_30cm+sand_30cm+bd_30cm+theta_0.33b_30cm, data = trafficability_0_10cm)) #Multiple R-squared:  0.5844 if rosetta model 5
+summary(lm(FC_0.9 ~ clay_30cm+sand_30cm+bd_30cm+theta_0.33b_30cm+theta_15b_30cm, data = trafficability_0_10cm)) #Multiple R-squared:  0.5988 if rosetta model 5
 
-write.csv(trafficability_0_10cm, file.path(tablesDir, 'trafficability_0_10cm_rosetta5_0_30cm_properties.csv'), row.names = TRUE)
+# write.csv(trafficability_0_10cm, file.path(tablesDir, 'trafficability_0_10cm_rosetta5_0_30cm_properties.csv'), row.names = TRUE)
