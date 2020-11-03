@@ -236,3 +236,109 @@ summary(lm(FC_0.9 ~ clay_30cm+sand_30cm+bd_30cm+theta_0.33b_30cm, data = traffic
 summary(lm(FC_0.9 ~ clay_30cm+sand_30cm+bd_30cm+theta_0.33b_30cm+theta_15b_30cm, data = trafficability_0_10cm)) #Multiple R-squared:  0.5988 if rosetta model 5
 
 # write.csv(trafficability_0_10cm, file.path(tablesDir, 'trafficability_0_10cm_rosetta5_0_30cm_properties.csv'), row.names = TRUE)
+
+
+#do the same with a 0-10 cm soil property summary
+soils_modeled_10cm$texture.sums <- soils_modeled_10cm$clay_10cm + soils_modeled_10cm$silt_10cm + soils_modeled_10cm$sand_10cm
+sum(is.na(soils_modeled_10cm$texture.sums)) #0 are NA
+sum(soils_modeled_10cm$texture.sums > 100.1 | soils_modeled_10cm$texture.sums < 99.9 ) #no hay problemsas
+
+soils_modeled_10cm$textural_class <- textural.class.calc(sand = soils_modeled_10cm$sand_10cm, silt = soils_modeled_10cm$silt_10cm, clay = soils_modeled_10cm$clay_10cm)
+table(soils_modeled_10cm$textural_class)
+soils_modeled_10cm[soils_modeled_10cm$cokey==2688,]
+write.csv(soils_modeled_10cm, file.path(tablesDir, 'soils_modeled_0_10cm_properties.csv'))
+
+#condense trafficability results from HYDRUS runs
+fnames_results <- list.files(summaryDir, full.names = FALSE, recursive = FALSE)
+head(fnames_results)
+tail(fnames_results)
+cokeys_modeled <- sub(pattern = 'soil_', replacement = '', x = fnames_results)
+cokeys_modeled <- sub(pattern = '_results.csv', replacement = '', x = cokeys_modeled)
+head(cokeys_modeled)
+tail(cokeys_modeled) #5494 because 15 soils produced error messages
+length(cokeys_modeled)
+extract_0_10cm_trafficability <- function(x) {
+  results <- read.csv(file.path(summaryDir, x), row.names=1)
+  results[4,]
+}
+trafficability_0_10cm_v2 <- do.call(rbind, lapply(fnames_results, extract_0_10cm_trafficability))
+dim(trafficability_0_10cm_v2)
+head(trafficability_0_10cm_v2)
+row.names(trafficability_0_10cm_v2) <- cokeys_modeled
+trafficability_0_10cm_v2[,1:4] <- lapply(trafficability_0_10cm_v2[,1:4], function(x) as.numeric(x))
+lapply(trafficability_0_10cm_v2, function(x) sum(is.na(x)))
+
+trafficability_0_10cm_v2$textural_class_10cm <- soils_modeled_10cm$textural_class[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
+trafficability_0_10cm_v2$ksat_10cm <- soils_modeled_10cm$ksat_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
+trafficability_0_10cm_v2$alpha_10cm <- soils_modeled_10cm$alpha_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
+trafficability_0_10cm_v2$theta_r_10cm <- soils_modeled_10cm$theta_r_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
+trafficability_0_10cm_v2$theta_s_10cm <- soils_modeled_10cm$theta_s_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
+trafficability_0_10cm_v2$clay_10cm <- soils_modeled_10cm$clay_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
+trafficability_0_10cm_v2$silt_10cm <- soils_modeled_10cm$silt_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
+trafficability_0_10cm_v2$sand_10cm <- soils_modeled_10cm$sand_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
+trafficability_0_10cm_v2$oc_10cm <- soils_modeled_10cm$oc_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
+trafficability_0_10cm_v2$bd_10cm <- soils_modeled_10cm$bd_13b_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
+trafficability_0_10cm_v2$theta_0.33b_10cm <- soils_modeled_10cm$theta_0.33b_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
+trafficability_0_10cm_v2$theta_15b_10cm <- soils_modeled_10cm$theta_15b_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
+trafficability_0_10cm_v2$rosetta.model <- mod_database$Roseta.model[match(row.names(trafficability_0_10cm_v2), mod_database$cokey)]
+trafficability_0_10cm_v2$soil_name <- mod_database$taxonname[match(row.names(trafficability_0_10cm_v2), mod_database$cokey)]
+trafficability_0_10cm_v2$theta_fc <- soils_modeled_10cm$theta_fc_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
+trafficability_0_10cm_v2$h_fc <- soils_modeled_10cm$h_fc_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
+
+tapply(trafficability_0_10cm_v2$FC_0.9, trafficability_0_10cm_v2$textural_class_10cm, mean, na.rm=TRUE)
+tapply(trafficability_0_10cm_v2$FC_0.9, trafficability_0_10cm_v2$textural_class_10cm, summary)
+tapply(trafficability_0_10cm_v2$FC_0.95, trafficability_0_10cm_v2$textural_class_10cm, mean, na.rm=TRUE)
+tapply(trafficability_0_10cm_v2$FC_0.9, trafficability_0_10cm_v2$rosetta.model, mean, na.rm=TRUE) #rosetta model 3 is biased
+table(trafficability_0_10cm_v2$rosetta.model)
+#2    3    5 
+#344   10 5140 
+sum(!is.na(trafficability_0_10cm_v2$FC_0.9) & trafficability_0_10cm_v2$rosetta.model==5 & !is.na(trafficability_0_10cm_v2$textural_class_10cm)) #5025
+
+lapply(trafficability_0_10cm_v2, function(x) sum(is.na(x)))
+soil_name_counts <- table(trafficability_0_10cm_v2$soil_name)[order(table(trafficability_0_10cm_v2$soil_name), decreasing=TRUE)]
+soil_name_mas30 <- soil_name_counts[soil_name_counts >= 30]
+
+#find unusual results
+sum(trafficability_0_10cm_v2$FC_0.9 > 20 & trafficability_0_10cm_v2$textural_class_10cm=='sandy loam', na.rm = TRUE) #9 sandy loams greater than 20 days
+trafficability_0_10cm_v2[trafficability_0_10cm_v2$FC_0.9 > 20 & trafficability_0_10cm_v2$textural_class_10cm=='sandy loam' & !is.na(trafficability_0_10cm_v2$FC_0.9),]
+sum(trafficability_0_10cm_v2$textural_class_10cm=='sandy loam') #1644 are sandy loam from 0-10 cm
+summary(trafficability_0_10cm_v2$FC_0.9[trafficability_0_10cm_v2$textural_class_10cm=='sandy loam'])
+sd(trafficability_0_10cm_v2$FC_0.9[trafficability_0_10cm_v2$textural_class_10cm=='sandy loam'], na.rm=TRUE) #sd is 1.96 days
+sum(trafficability_0_10cm_v2$FC_0.9[trafficability_0_10cm_v2$textural_class_10cm=='sandy loam'] > 7.6+2*3, na.rm = TRUE) #there are 21 > 13.6 days
+trafficability_0_10cm_v2[which(trafficability_0_10cm_v2$FC_0.9 > 13.6 & trafficability_0_10cm_v2$textural_class_10cm=='sandy loam'),]
+soil_data$soil_11057900$soil #Adinot soil has sharp clay and silt increase at 5 cm depth; theta_fc from 0-5 is 0.132; theta_fc from 5-10 is 0.244
+horizons_modeled_df <- horizons(horizons_modeled)
+horizons_modeled_df[horizons_modeled_df$cokey==11057900,]
+soil_data$soil_6228$soil #Kinkel soil also has sharp clay incrase but at 22 cm
+horizons_modeled_df[horizons_modeled_df$cokey==6228,] #rosetta model 2 used for A2 horizon and gives relatively low h_fc estimate from low alpha w
+soil_data$soil_11134$soil
+horizons_modeled_df[horizons_modeled_df$cokey==11134,]#relatively high tension values for FC due to low alpha--possible result of Rosetta 2 model
+soil_data$soil_11460517$soil
+horizons_modeled_df[horizons_modeled_df$cokey==11460517,] #sharp increase in h_fc at 5 cm as a result of alpha decrease, silt content doubling
+horizons_modeled_df[horizons_modeled_df$cokey==11694258,] #sharp increase in h_fC at 6 cm as a result of alpha decrease, silt content jumping
+
+summary(trafficability_0_10cm_v2$h_fc[trafficability_0_10cm_v2$textural_class_10cm=='sandy loam'])
+sd(trafficability_0_10cm_v2$h_fc[trafficability_0_10cm_v2$textural_class_10cm=='sandy loam'])
+sum(trafficability_0_10cm_v2$h_fc[trafficability_0_10cm_v2$textural_class_10cm=='sandy loam'] < -169.7-54*3) #only 14 are less than 3 sd's from mean
+
+
+soilname_summary <- do.call(cbind, lapply(names(soil_name_mas30), function(x) as.matrix(summary(trafficability_0_10cm_v2$FC_0.9[trafficability_0_10cm_v2$soil_name==x]))[1:6,]))
+colnames(soilname_summary) <- names(soil_name_mas30) 
+soilname_summary <- rbind(soilname_summary, n=as.integer(sapply(names(soil_name_mas30), function(x) sum(!is.na(trafficability_0_10cm_v2$FC_0.9[trafficability_0_10cm_v2$soil_name==x])))))
+soilname_summary
+soilname_summary <- rbind(soilname_summary, mean_clay=sapply(names(soil_name_mas30), function(x) mean(trafficability_0_10cm_v2$clay_10cm[trafficability_0_10cm_v2$soil_name==x], na.rm=TRUE)))
+write.csv(soilname_summary, file.path(tablesDir, 'summary_by_soilname_0_10cm_properties.csv'), row.names = TRUE)
+mod_database[mod_database$cokey==10610083,] 
+
+textural_class_summary <- do.call(cbind, lapply(unique(trafficability_0_10cm_v2$textural_class_10cm), function(x) as.matrix(summary(trafficability_0_10cm_v2$FC_0.9[trafficability_0_10cm_v2$textural_class_10cm==x]))[1:6,]))
+colnames(textural_class_summary) <- unique(trafficability_0_10cm_v2$textural_class_10cm)
+textural_class_summary
+textural_class_summary <- rbind(textural_class_summary, n=as.integer(sapply(unique(trafficability_0_10cm_v2$textural_class_10cm), function(x) sum(!is.na(trafficability_0_10cm_v2$FC_0.9[trafficability_0_10cm_v2$textural_class_10cm==x])))))
+textural_class_summary <- rbind(textural_class_summary, mean_clay=sapply(unique(trafficability_0_10cm_v2$textural_class_10cm), function(x) mean(trafficability_0_10cm_v2$clay_10cm[trafficability_0_10cm_v2$textural_class_10cm==x], na.rm=TRUE)))
+textural_class_summary <- rbind(textural_class_summary, FC_0.95=sapply(unique(trafficability_0_10cm_v2$textural_class_10cm), function(x) mean(trafficability_0_10cm_v2$FC_0.95[trafficability_0_10cm_v2$textural_class_10cm==x], na.rm=TRUE)))
+textural_class_summary <- rbind(textural_class_summary, FC_0.85=sapply(unique(trafficability_0_10cm_v2$textural_class_10cm), function(x) mean(trafficability_0_10cm_v2$FC_0.85[trafficability_0_10cm_v2$textural_class_10cm==x], na.rm=TRUE)))
+textural_class_summary <- rbind(textural_class_summary, FC_0.8=sapply(unique(trafficability_0_10cm_v2$textural_class_10cm), function(x) mean(trafficability_0_10cm_v2$FC_0.8[trafficability_0_10cm_v2$textural_class_10cm==x], na.rm=TRUE)))
+colnames(textural_class_summary)[order(textural_class_summary[8,])]
+textural_class_summary <- textural_class_summary[,order(textural_class_summary[8,])]
+row.names(textural_class_summary)
+write.csv(textural_class_summary, file.path(tablesDir, 'summary_by_textural_class_0_10cm.csv'), row.names = TRUE)
