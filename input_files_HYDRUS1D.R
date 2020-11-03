@@ -48,7 +48,7 @@ mod_database <- mod_database[which(mod_database$hzn_top<200),] #delete horizons 
 # yolo_2 <- select_soil('Yolo', 11067)
 # panoche <- select_soil('PANOCHE', 6829)
 
-#get data for soil name; only will work if soil has exactly one  instance
+#get data for each cokey
 soil_by_cokey <- function(cokey) {
   soil <- mod_database[mod_database$cokey==cokey,]
   mat_number <- nrow(soil)
