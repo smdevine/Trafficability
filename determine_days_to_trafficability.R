@@ -1,6 +1,8 @@
-laptop <- FALSE
+laptop <- TRUE
 if (laptop) {
-  resultsDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/HYDRUS_runs'} else {
+  resultsDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/HYDRUS_runs'
+  summaryDir <- file.path(resultsDir, 'summary')
+  summaryDir2 <- file.path(resultsDir, 'summary')} else {
     resultsDir <- 'D:/PostDoc/Trafficability/Oct2020test'
     summaryDir <- file.path(resultsDir, 'summary')
     summaryDir2 <- file.path(resultsDir, 'summary_v2')
@@ -54,6 +56,7 @@ determine_trafficability <- function(f_path, resultsDir, flood_duration) {
 # determine_trafficability(f_path = 'Panoche_4/Panoche_4', resultsDir = resultsDir, FC_factor=0.9, flood_duration=4)
 # determine_trafficability(f_path = 'Yolo_2/Yolo_2', resultsDir = resultsDir, FC_factor=0.9, flood_duration=4)
 # determine_trafficability(f_path = 'soil_166', resultsDir = resultsDir, flood_duration=4)
+determine_trafficability(f_path = 'Panoche_plants', resultsDir = resultsDir, flood_duration = 4)
 
 path_names <- list.dirs(resultsDir, full.names = FALSE, recursive = FALSE)
 head(path_names)
@@ -92,3 +95,4 @@ determine_trafficability_v2 <- function(f_path, resultsDir, flood_duration) {
   write.csv(results, file = file.path(summaryDir2, paste0(f_path, '_results.csv')), row.names=TRUE)
 }
 sapply(path_names, determine_trafficability_v2, resultsDir=resultsDir, flood_duration=4)
+determine_trafficability_v2(f_path = 'Panoche_plants', resultsDir = resultsDir, flood_duration = 4)
