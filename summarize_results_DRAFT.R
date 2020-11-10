@@ -82,11 +82,12 @@ wtd.mean_v2 <- function(x, y) {
   m
 }
 
-depth_X_properties <- function(horizon_SPC, depth, vars_of_interest = c('clay', 'silt', 'sand', 'estimated_oc', 'db_13b', 'wr_13b', 'wr_15b', 'Ks..cm.d.', 'K0.cm.d.', 'teta_r', 'teta_s', 'alpha..1.cm.', 'n', 'theta_fc', 'h_fc'), varnames = c('clay', 'silt', 'sand', 'oc', 'bd_13b', 'theta_0.33b', 'theta_15b', 'ksat', 'f_ksat', 'theta_r', 'theta_s', 'alpha', 'n', 'theta_fc', 'h_fc')) { #lep is linear extensibility
+depth_X_properties <- function(horizon_SPC, upper_depth=0, depth, vars_of_interest = c('clay', 'silt', 'sand', 'estimated_oc', 'db_13b', 'wr_13b', 'wr_15b', 'Ks..cm.d.', 'K0.cm.d.', 'teta_r', 'teta_s', 'alpha..1.cm.', 'n', 'theta_fc', 'h_fc', 'Roseta.model'), varnames = c('clay', 'silt', 'sand', 'oc', 'bd_13b', 'theta_0.33b', 'theta_15b', 'ksat', 'f_ksat', 'theta_r', 'theta_s', 'alpha', 'n', 'theta_fc', 'h_fc', 'Rosetta.model')) { #lep is linear extensibility
   columnames <- paste0(varnames, '_', depth, 'cm')
   print(cbind(vars_of_interest, columnames)) #show that it's all lined up
   assign("depth", depth, envir = .GlobalEnv) #this necessary because slice can't find the variable otherwise
-  sliced_SPC <- slice(horizon_SPC, 0:(depth-1) ~ .) #depth was '0:depth' in previous version
+  assign("upper_depth", upper_depth, envir = .GlobalEnv)
+  sliced_SPC <- slice(horizon_SPC, upper_depth:(depth-1) ~ .) #depth was '0:depth' in previous version
   horizons(sliced_SPC) <- horizons(sliced_SPC)[order(as.integer(sliced_SPC$cokey), sliced_SPC$hzn_top),] #because integer codes are coerced to character by slice with the sliced data.frame re-ordered contrary to order of site-level data 
   stopifnot(unique(sliced_SPC$cokey)==site(sliced_SPC)$cokey)
   for (i in seq_along(vars_of_interest)) {
@@ -107,6 +108,8 @@ depths(horizons_modeled) <- cokey ~ hzn_top + hzn_bot
 
 soils_modeled_10cm <- depth_X_properties(horizon_SPC = horizons_modeled, depth = 10)
 dim(soils_modeled_10cm)
+
+soils_modeled_10_50cm <- depth_X_properties(horizon_SPC = horizons_modeled, upper_depth = 10, depth = 50)
 
 #check textural class--function taken from ssurgo_allCA_aggregation_awc_r.R
 textural.class.calc <- function(sand, silt, clay) {
@@ -242,6 +245,14 @@ summary(lm(FC_0.9 ~ clay_30cm+sand_30cm+bd_30cm+theta_0.33b_30cm+theta_15b_30cm,
 
 # write.csv(trafficability_0_10cm, file.path(tablesDir, 'trafficability_0_10cm_rosetta5_0_30cm_properties.csv'), row.names = TRUE)
 
+#add textural class to 10-50 cm summary
+soils_modeled_10_50cm$texture.sums <- soils_modeled_10_50cm$clay_50cm + soils_modeled_10_50cm$silt_50cm + soils_modeled_10_50cm$sand_50cm
+sum(is.na(soils_modeled_10_50cm$texture.sums)) #196 are NA
+sum(soils_modeled_10_50cm$texture.sums > 100.1 | soils_modeled_10_50cm$texture.sums < 99.9, na.rm = TRUE) #1 problem
+summary(soils_modeled_10_50cm$texture.sums)
+
+soils_modeled_10_50cm$textural_class <- textural.class.calc(sand = soils_modeled_10_50cm$sand_50cm, silt = soils_modeled_10_50cm$silt_50cm, clay = soils_modeled_10_50cm$clay_50cm)
+table(soils_modeled_10_50cm$textural_class)
 
 #do the same with a 0-10 cm soil property summary
 soils_modeled_10cm$texture.sums <- soils_modeled_10cm$clay_10cm + soils_modeled_10cm$silt_10cm + soils_modeled_10cm$sand_10cm
@@ -367,6 +378,66 @@ soils_modeled_10cm$result_opt3 <- sapply(seq_along(soils_modeled_10cm$traff_def_
 summary(soils_modeled_10cm$result_opt3) #147 NA's
 soils_modeled_10cm$result_opt4 <- sapply(seq_along(soils_modeled_10cm$traff_def_opt4), function(i) {trafficability_0_10cm_v2[[i]][as.character(soils_modeled_10cm$traff_def_opt4[i])==theta_seq,]})
 summary(soils_modeled_10cm$result_opt4)
+traffic3_by_texture_lm <- lm(result_opt3 ~ textural_class, data = soils_modeled_10cm)
+summary(traffic3_by_texture_lm) #r^2=0.64
+
+#get some names by textural class
+soils_modeled_10cm[soils_modeled_10cm$textural_class=='clay' & is.na(soils_modeled_10cm$result_opt1),]
+clay_cokeys_noresults <- soils_modeled_10cm$cokey[soils_modeled_10cm$textural_class=='clay' & is.na(soils_modeled_10cm$result_opt3)]
+write.csv(clay_cokeys_noresults, file.path(tablesDir, 'clay_cokeys_no_results.csv')) #hay 50
+
+#add 10-50 cm info
+soils_modeled_10cm$textural_class_10_50cm <- soils_modeled_10_50cm$textural_class[match(soils_modeled_10cm$cokey, soils_modeled_10_50cm$cokey)]
+table(soils_modeled_10cm$textural_class_10_50cm)
+summary(lm(result_opt3 ~ textural_class + textural_class_10_50cm, data = soils_modeled_10cm))
+
+#look at oc and bd correlation
+correlation_results <- soils_modeled_10cm
+correlation_results <- correlation_results[!is.na(correlation_results$result_opt3), ]
+dim(correlation_results) #5344
+correlation_results <- correlation_results[!is.na(correlation_results$oc_10cm), ]
+correlation_results <- correlation_results[!is.na(correlation_results$bd_13b_10cm), ]
+dim(correlation_results)
+sum(correlation_results$oc_10cm > 10) #16
+sum(correlation_results$oc_10cm > 8) #26
+sum(correlation_results$oc_10cm > 7) #44
+sum(correlation_results$oc_10cm > 5) #191
+correlation_results <- correlation_results[correlation_results$oc_10cm > 0 & correlation_results$oc_10cm <=8,]
+hist(correlation_results$oc_10cm)
+dim(correlation_results) #4917
+summary(correlation_results$bd_13b_10cm)
+hist(correlation_results$bd_13b_10cm)
+sum(correlation_results$bd_13b_10cm < 0.8) #18
+sum(correlation_results$bd_13b_10cm < 0.9) #49
+sum(correlation_results$bd_13b_10cm < 1) #64
+correlation_results <- correlation_results[!correlation_results$bd_13b_10cm < 1, ]
+textural_classes <- unique(correlation_results$textural_class)
+for (i in seq_along(textural_classes)) {
+  print(textural_classes[i])
+  print(summary(lm(correlation_results$result_opt3[correlation_results$textural_class==textural_classes[i]] ~ correlation_results$oc_10cm[correlation_results$textural_class==textural_classes[i]])))
+}
+for (i in seq_along(textural_classes)) {
+  print(textural_classes[i])
+  print(summary(lm(correlation_results$result_opt3[correlation_results$textural_class==textural_classes[i]] ~ correlation_results$bd_13b_10cm[correlation_results$textural_class==textural_classes[i]])))
+}
+
+plot(correlation_results$oc_10cm[correlation_results$textural_class=='loam'], correlation_results$result_opt3[correlation_results$textural_class=='loam'])
+plot(correlation_results$oc_10cm[correlation_results$textural_class=='silt loam'], correlation_results$result_opt3[correlation_results$textural_class=='silt loam'])
+plot(correlation_results$oc_10cm[correlation_results$textural_class=='silty clay loam'], correlation_results$result_opt3[correlation_results$textural_class=='silty clay loam'])
+plot(correlation_results$oc_10cm[correlation_results$textural_class=='silty clay loam'], correlation_results$result_opt3[correlation_results$textural_class=='silty clay loam'])
+traffic_by_texture_lm <- lm(result_opt3 ~ textural_class, data = correlation_results)
+summary(traffic_by_texture_lm)
+data.frame(texture=textural_classes, predict(traffic_by_texture_lm, data.frame(textural_class=textural_classes), se.fit = TRUE, interval = 'prediction', level = 0.5))
+predict(traffic_by_texture_lm, data.frame(textural_class='clay'), se.fit = TRUE, interval = 'prediction', level = 0.9)
+quantile(correlation_results$result_opt3[correlation_results$textural_class=='clay'], probs=c(0.975, 0.95, 0.9, 0.75, 0.5, 0.25, 0.1, 0.05, 0.025))
+hist(correlation_results$result_opt3[correlation_results$textural_class=='clay'])
+predict(traffic_by_texture_lm, data.frame(textural_class='sand'), se.fit = TRUE, interval = 'prediction', level = 0.85)
+traffic_by_texture_om_bd_lm <- lm(result_opt3 ~ textural_class + oc_10cm + bd_13b_10cm, data = correlation_results)
+summary(traffic_by_texture_om_bd_lm)
+
+traffic_by_clay_lm <- lm(result_opt3 ~ clay_10cm, data = correlation_results)
+summary(traffic_by_clay_lm) #0.60
+data.frame(clay=100*seq(0, 0.95, by=0.05), predict(traffic_by_clay_lm, data.frame(clay_10cm=100*seq(0, 0.95, by=0.05)), se.fit = TRUE, interval = 'prediction', level = 0.9)) #negative predictions for clay < 15%
 
 #create summary based on soil names
 soils_modeled_10cm$soil_name <- mod_database$taxonname[match(soils_modeled_10cm$cokey, mod_database$cokey)]
@@ -402,3 +473,14 @@ summarize_by_texture('result_opt1')
 summarize_by_texture('result_opt2')
 summarize_by_texture('result_opt3')
 summarize_by_texture('result_opt4')
+
+#look at rosetta model=5 only
+table(soils_modeled_10cm$Rosetta.model_10cm)
+sum(soils_modeled_10cm$Rosetta.model_10cm==5) #5130
+soils_modeled_10cm_rosetta5 <- soils_modeled_10cm[soils_modeled_10cm$Rosetta.model_10cm==5,]
+dim(soils_modeled_10cm_rosetta5) #5130
+summary(lm(result_opt3 ~ textural_class, data = soils_modeled_10cm_rosetta5)) #r2=0.6981, rse=5.77, 134 are NA
+summary(lm(result_opt3 ~ textural_class + bd_13b_10cm, data = soils_modeled_10cm_rosetta5)) #r2=0.6998, rse=5.758
+summary(lm(result_opt3 ~ textural_class + bd_13b_10cm + oc_10cm, data = soils_modeled_10cm_rosetta5)) #r2=0.7095, rse=0.71
+summary(lm(result_opt3 ~ textural_class + textural_class_10_50cm, data = soils_modeled_10cm_rosetta5)) #r2=0.7059, rse=5.752, 310 are NA
+summary(lm(result_opt3 ~ textural_class + textural_class_10_50cm + bd_13b_10cm + oc_10cm, data = soils_modeled_10cm_rosetta5)) #r2=0.7191, rse=5.634, 362 are NA
