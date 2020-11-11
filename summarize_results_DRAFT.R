@@ -281,67 +281,6 @@ trafficability_0_10cm_v2 <- lapply(fnames_results, extract_0_10cm_trafficability
 length(trafficability_0_10cm_v2)
 names(trafficability_0_10cm_v2) <- cokeys_modeled
 
-#approach to summarize data based on summaryDir
-# trafficability_0_10cm_v2 <- do.call(rbind, lapply(fnames_results, extract_0_10cm_trafficability))
-# dim(trafficability_0_10cm_v2)
-# head(trafficability_0_10cm_v2)
-# row.names(trafficability_0_10cm_v2) <- cokeys_modeled
-# trafficability_0_10cm_v2[,1:4] <- lapply(trafficability_0_10cm_v2[,1:4], function(x) as.numeric(x))
-# lapply(trafficability_0_10cm_v2, function(x) sum(is.na(x)))
-# 
-# trafficability_0_10cm_v2$textural_class_10cm <- soils_modeled_10cm$textural_class[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
-# trafficability_0_10cm_v2$ksat_10cm <- soils_modeled_10cm$ksat_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
-# trafficability_0_10cm_v2$alpha_10cm <- soils_modeled_10cm$alpha_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
-# trafficability_0_10cm_v2$theta_r_10cm <- soils_modeled_10cm$theta_r_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
-# trafficability_0_10cm_v2$theta_s_10cm <- soils_modeled_10cm$theta_s_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
-# trafficability_0_10cm_v2$clay_10cm <- soils_modeled_10cm$clay_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
-# trafficability_0_10cm_v2$silt_10cm <- soils_modeled_10cm$silt_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
-# trafficability_0_10cm_v2$sand_10cm <- soils_modeled_10cm$sand_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
-# trafficability_0_10cm_v2$oc_10cm <- soils_modeled_10cm$oc_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
-# trafficability_0_10cm_v2$bd_10cm <- soils_modeled_10cm$bd_13b_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
-# trafficability_0_10cm_v2$theta_0.33b_10cm <- soils_modeled_10cm$theta_0.33b_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
-# trafficability_0_10cm_v2$theta_15b_10cm <- soils_modeled_10cm$theta_15b_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
-# trafficability_0_10cm_v2$rosetta.model <- mod_database$Roseta.model[match(row.names(trafficability_0_10cm_v2), mod_database$cokey)]
-# trafficability_0_10cm_v2$soil_name <- mod_database$taxonname[match(row.names(trafficability_0_10cm_v2), mod_database$cokey)]
-# trafficability_0_10cm_v2$theta_fc <- soils_modeled_10cm$theta_fc_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
-# trafficability_0_10cm_v2$h_fc <- soils_modeled_10cm$h_fc_10cm[match(row.names(trafficability_0_10cm_v2), soils_modeled_10cm$cokey)]
-# 
-# tapply(trafficability_0_10cm_v2$FC_0.9, trafficability_0_10cm_v2$textural_class_10cm, mean, na.rm=TRUE)
-# tapply(trafficability_0_10cm_v2$FC_0.9, trafficability_0_10cm_v2$textural_class_10cm, summary)
-# tapply(trafficability_0_10cm_v2$FC_0.95, trafficability_0_10cm_v2$textural_class_10cm, mean, na.rm=TRUE)
-# tapply(trafficability_0_10cm_v2$FC_0.9, trafficability_0_10cm_v2$rosetta.model, mean, na.rm=TRUE) #rosetta model 3 is biased
-# table(trafficability_0_10cm_v2$rosetta.model)
-# #2    3    5 
-# #344   10 5140 
-# sum(!is.na(trafficability_0_10cm_v2$FC_0.9) & trafficability_0_10cm_v2$rosetta.model==5 & !is.na(trafficability_0_10cm_v2$textural_class_10cm)) #5025
-# 
-# lapply(trafficability_0_10cm_v2, function(x) sum(is.na(x)))
-# soil_name_counts <- table(trafficability_0_10cm_v2$soil_name)[order(table(trafficability_0_10cm_v2$soil_name), decreasing=TRUE)]
-# soil_name_mas30 <- soil_name_counts[soil_name_counts >= 30]
-# 
-# #find unusual results
-# sum(trafficability_0_10cm_v2$FC_0.9 > 20 & trafficability_0_10cm_v2$textural_class_10cm=='sandy loam', na.rm = TRUE) #9 sandy loams greater than 20 days
-# trafficability_0_10cm_v2[trafficability_0_10cm_v2$FC_0.9 > 20 & trafficability_0_10cm_v2$textural_class_10cm=='sandy loam' & !is.na(trafficability_0_10cm_v2$FC_0.9),]
-# sum(trafficability_0_10cm_v2$textural_class_10cm=='sandy loam') #1644 are sandy loam from 0-10 cm
-# summary(trafficability_0_10cm_v2$FC_0.9[trafficability_0_10cm_v2$textural_class_10cm=='sandy loam'])
-# sd(trafficability_0_10cm_v2$FC_0.9[trafficability_0_10cm_v2$textural_class_10cm=='sandy loam'], na.rm=TRUE) #sd is 1.96 days
-# sum(trafficability_0_10cm_v2$FC_0.9[trafficability_0_10cm_v2$textural_class_10cm=='sandy loam'] > 7.6+2*3, na.rm = TRUE) #there are 21 > 13.6 days
-# trafficability_0_10cm_v2[which(trafficability_0_10cm_v2$FC_0.9 > 13.6 & trafficability_0_10cm_v2$textural_class_10cm=='sandy loam'),]
-# soil_data$soil_11057900$soil #Adinot soil has sharp clay and silt increase at 5 cm depth; theta_fc from 0-5 is 0.132; theta_fc from 5-10 is 0.244
-# horizons_modeled_df <- horizons(horizons_modeled)
-# horizons_modeled_df[horizons_modeled_df$cokey==11057900,]
-# soil_data$soil_6228$soil #Kinkel soil also has sharp clay incrase but at 22 cm
-# horizons_modeled_df[horizons_modeled_df$cokey==6228,] #rosetta model 2 used for A2 horizon and gives relatively low h_fc estimate from low alpha w
-# soil_data$soil_11134$soil
-# horizons_modeled_df[horizons_modeled_df$cokey==11134,]#relatively high tension values for FC due to low alpha--possible result of Rosetta 2 model
-# soil_data$soil_11460517$soil
-# horizons_modeled_df[horizons_modeled_df$cokey==11460517,] #sharp increase in h_fc at 5 cm as a result of alpha decrease, silt content doubling
-# horizons_modeled_df[horizons_modeled_df$cokey==11694258,] #sharp increase in h_fC at 6 cm as a result of alpha decrease, silt content jumping
-# 
-# summary(trafficability_0_10cm_v2$h_fc[trafficability_0_10cm_v2$textural_class_10cm=='sandy loam'])
-# sd(trafficability_0_10cm_v2$h_fc[trafficability_0_10cm_v2$textural_class_10cm=='sandy loam'])
-# sum(trafficability_0_10cm_v2$h_fc[trafficability_0_10cm_v2$textural_class_10cm=='sandy loam'] < -169.7-54*3) #only 14 are less than 3 sd's from mean
-
 #approach to summarize data on summaryDir2
 list.files(tablesDir)
 FC_thresholds <- read.csv(file.path(tablesDir, 'trafficability_defs_11_3_20.csv'), stringsAsFactors = FALSE)
@@ -390,6 +329,7 @@ write.csv(clay_cokeys_noresults, file.path(tablesDir, 'clay_cokeys_no_results.cs
 soils_modeled_10cm$textural_class_10_50cm <- soils_modeled_10_50cm$textural_class[match(soils_modeled_10cm$cokey, soils_modeled_10_50cm$cokey)]
 table(soils_modeled_10cm$textural_class_10_50cm)
 summary(lm(result_opt3 ~ textural_class + textural_class_10_50cm, data = soils_modeled_10cm))
+soils_modeled_10cm$ksat_10_50cm <- soils_modeled_10_50cm$ksat_50cm[match(soils_modeled_10cm$cokey, soils_modeled_10_50cm$cokey)]
 
 #look at oc and bd correlation
 correlation_results <- soils_modeled_10cm
@@ -484,3 +424,81 @@ summary(lm(result_opt3 ~ textural_class + bd_13b_10cm, data = soils_modeled_10cm
 summary(lm(result_opt3 ~ textural_class + bd_13b_10cm + oc_10cm, data = soils_modeled_10cm_rosetta5)) #r2=0.7095, rse=0.71
 summary(lm(result_opt3 ~ textural_class + textural_class_10_50cm, data = soils_modeled_10cm_rosetta5)) #r2=0.7059, rse=5.752, 310 are NA
 summary(lm(result_opt3 ~ textural_class + textural_class_10_50cm + bd_13b_10cm + oc_10cm, data = soils_modeled_10cm_rosetta5)) #r2=0.7191, rse=5.634, 362 are NA
+
+
+summary(lm(result_opt2 ~ textural_class, data = soils_modeled_10cm_rosetta5)) #r2=0.6675, rse=5.289, 126 are NA
+summary(lm(result_opt2 ~ textural_class + bd_13b_10cm, data = soils_modeled_10cm_rosetta5)) #r2=0.6682, rse=5.284
+summary(lm(result_opt2 ~ textural_class + bd_13b_10cm + oc_10cm, data = soils_modeled_10cm_rosetta5)) #r2=0.682, rse=5.164
+summary(lm(result_opt2 ~ textural_class + textural_class_10_50cm, data = soils_modeled_10cm_rosetta5)) #r2=0.6759, rse=5.288, 302 are NA
+summary(lm(result_opt2 ~ clay_10cm + sand_10cm + bd_13b_10cm, data = soils_modeled_10cm_rosetta5)) #r2=0.5271, rse=6.292
+summary(lm(result_opt2 ~ ksat_10cm, data = soils_modeled_10cm_rosetta5)) #r2=0.05252, rse=8.921
+summary(lm(result_opt2 ~ ksat_10cm + ksat_10_50cm, data = soils_modeled_10cm_rosetta5)) #r2=0.06094, rse=8.985
+summary(lm(result_opt2 ~ textural_class + textural_class_10_50cm + bd_13b_10cm + oc_10cm, data = soils_modeled_10cm_rosetta5)) #r2=0.6922, rse=5.145, 355 are NA
+summary(lm(result_opt2 ~ ksat_10cm + textural_class, data=soils_modeled_10cm_rosetta5)) #r2=0.668, rse=5.286
+
+lapply(1:length(textural_classes), function(i) {
+  hist(soils_modeled_10cm_rosetta5$result_opt3[soils_modeled_10cm_rosetta5$textural_class==textural_classes[i]], main=textural_classes[i])
+})
+lapply(1:length(textural_classes), function(i) {
+  hist(soils_modeled_10cm_rosetta5$result_opt1[soils_modeled_10cm_rosetta5$textural_class==textural_classes[i]], main=textural_classes[i])
+})
+names(textural_classes) <- textural_classes
+quantile_breaks_result3 <- lapply(textural_classes, function(x) {
+  quantile(soils_modeled_10cm_rosetta5$result_opt3[soils_modeled_10cm_rosetta5$textural_class==x], probs = c(0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.975, 0.99), na.rm = TRUE)
+})
+quantile_breaks_result3 <- rbind(as.data.frame(quantile_breaks_result3), sd=sapply(textural_classes, function(x) {sd(soils_modeled_10cm_rosetta5$result_opt3[soils_modeled_10cm_rosetta5$textural_class==x], na.rm=TRUE)}), mean=sapply(textural_classes, function(x) {mean(soils_modeled_10cm_rosetta5$result_opt3[soils_modeled_10cm_rosetta5$textural_class==x], na.rm=TRUE)}))
+write.csv(quantile_breaks_result3, file.path(tablesDir, 'quantiles_result3_rosetta5.csv'), row.names = TRUE)
+
+quantile_breaks_result2 <- lapply(textural_classes, function(x) {
+  quantile(soils_modeled_10cm_rosetta5$result_opt2[soils_modeled_10cm_rosetta5$textural_class==x], probs = c(0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.975, 0.99), na.rm = TRUE)
+})
+quantile_breaks_result2 <- rbind(as.data.frame(quantile_breaks_result2), sd=sapply(textural_classes, function(x) {sd(soils_modeled_10cm_rosetta5$result_opt2[soils_modeled_10cm_rosetta5$textural_class==x], na.rm=TRUE)}), mean=sapply(textural_classes, function(x) {mean(soils_modeled_10cm_rosetta5$result_opt2[soils_modeled_10cm_rosetta5$textural_class==x], na.rm=TRUE)}))
+write.csv(quantile_breaks_result2, file.path(tablesDir, 'quantiles_result2_rosetta5.csv'), row.names = TRUE)
+for (i in seq_along(textural_classes)) {
+  if (length(unique(soils_modeled_10cm_rosetta5$textural_class_10_50cm[soils_modeled_10cm_rosetta5$textural_class==textural_classes[i]])) >= 2) {
+    print(textural_classes[i])
+    print(summary(lm(soils_modeled_10cm_rosetta5$result_opt2[soils_modeled_10cm_rosetta5$textural_class==textural_classes[i]] ~ soils_modeled_10cm_rosetta5$textural_class_10_50cm[soils_modeled_10cm_rosetta5$textural_class==textural_classes[i]])))
+  } else {next}
+}
+#now look at BD as factor
+for (i in seq_along(textural_classes)) {
+  print(textural_classes[i])
+  print(summary(lm(soils_modeled_10cm_rosetta5$result_opt2[soils_modeled_10cm_rosetta5$textural_class==textural_classes[i]] ~ soils_modeled_10cm_rosetta5$bd_13b_10cm[soils_modeled_10cm_rosetta5$textural_class==textural_classes[i]])))
+}
+#now look at Ks as factor
+for (i in seq_along(textural_classes)) {
+  print(textural_classes[i])
+  print(summary(lm(soils_modeled_10cm_rosetta5$result_opt2[soils_modeled_10cm_rosetta5$textural_class==textural_classes[i]] ~ soils_modeled_10cm_rosetta5$ksat_10cm[soils_modeled_10cm_rosetta5$textural_class==textural_classes[i]])))
+}
+#now look at h_fc assumption as factor
+for (i in seq_along(textural_classes)) {
+  print(textural_classes[i])
+  print(summary(lm(soils_modeled_10cm_rosetta5$result_opt2[soils_modeled_10cm_rosetta5$textural_class==textural_classes[i]] ~ soils_modeled_10cm_rosetta5$h_fc_10cm[soils_modeled_10cm_rosetta5$textural_class==textural_classes[i]])))
+}
+#now look at h_fc, bd, and ksat as explaining variation within each 0-10 cm texture class
+for (i in seq_along(textural_classes)) {
+  print(textural_classes[i])
+  print(summary(lm(soils_modeled_10cm_rosetta5$result_opt2[soils_modeled_10cm_rosetta5$textural_class==textural_classes[i]] ~ soils_modeled_10cm_rosetta5$h_fc_10cm[soils_modeled_10cm_rosetta5$textural_class==textural_classes[i]] + soils_modeled_10cm_rosetta5$ksat_10cm[soils_modeled_10cm_rosetta5$textural_class==textural_classes[i]] + soils_modeled_10cm_rosetta5$bd_13b_10cm[soils_modeled_10cm_rosetta5$textural_class==textural_classes[i]])))
+}
+
+#now look at h_fc, bd, and ksat as explaining variation within each 0-10 cm texture class
+for (i in seq_along(textural_classes)) {
+  if (length(unique(soils_modeled_10cm_rosetta5$textural_class_10_50cm[soils_modeled_10cm_rosetta5$textural_class==textural_classes[i]])) >= 2) {
+    print(textural_classes[i])
+    print(summary(lm(soils_modeled_10cm_rosetta5$result_opt2[soils_modeled_10cm_rosetta5$textural_class==textural_classes[i]] ~ soils_modeled_10cm_rosetta5$h_fc_10cm[soils_modeled_10cm_rosetta5$textural_class==textural_classes[i]] + soils_modeled_10cm_rosetta5$ksat_10cm[soils_modeled_10cm_rosetta5$textural_class==textural_classes[i]] + soils_modeled_10cm_rosetta5$bd_13b_10cm[soils_modeled_10cm_rosetta5$textural_class==textural_classes[i]] +  soils_modeled_10cm_rosetta5$textural_class_10_50cm[soils_modeled_10cm_rosetta5$textural_class==textural_classes[i]])))} else {next}
+}
+
+#results as function of 0-10 cm ksat within each textural class 
+plot(soils_modeled_10cm_rosetta5$ksat_10cm[soils_modeled_10cm_rosetta5$textural_class=='clay'], soils_modeled_10cm_rosetta5$result_opt2[soils_modeled_10cm_rosetta5$textural_class=='clay'])
+plot(soils_modeled_10cm_rosetta5$ksat_10cm[soils_modeled_10cm_rosetta5$textural_class=='sand'], soils_modeled_10cm_rosetta5$result_opt2[soils_modeled_10cm_rosetta5$textural_class=='sand'])
+plot(soils_modeled_10cm_rosetta5$ksat_10cm[soils_modeled_10cm_rosetta5$textural_class=='sandy loam'], soils_modeled_10cm_rosetta5$result_opt2[soils_modeled_10cm_rosetta5$textural_class=='sandy loam'])
+plot(soils_modeled_10cm_rosetta5$ksat_10cm[soils_modeled_10cm_rosetta5$textural_class=='loam'], soils_modeled_10cm_rosetta5$result_opt2[soils_modeled_10cm_rosetta5$textural_class=='loam'])
+plot(soils_modeled_10cm_rosetta5$ksat_10cm[soils_modeled_10cm_rosetta5$textural_class=='loamy sand'], soils_modeled_10cm_rosetta5$result_opt2[soils_modeled_10cm_rosetta5$textural_class=='loamy sand'])
+plot(soils_modeled_10cm_rosetta5$ksat_10cm[soils_modeled_10cm_rosetta5$textural_class=='loamy sand'], soils_modeled_10cm_rosetta5$result_opt2[soils_modeled_10cm_rosetta5$textural_class=='loamy sand'])
+
+#boxplots
+for (i in seq_along(textural_classes)) {
+  test <- boxplot(soils_modeled_10cm_rosetta5$result_opt2[soils_modeled_10cm_rosetta5$textural_class==textural_classes[i]], main=textural_classes[i], plot = TRUE, range = 3)
+  print(textural_classes[i])
+  print(test)
+}
