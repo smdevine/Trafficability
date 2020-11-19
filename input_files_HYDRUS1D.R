@@ -4,7 +4,7 @@ options(width=110)
 
 workDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/data from Stathis'
 templateDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/Oct2020test/Template/Template'
-modelDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/Oct2020test'
+modelDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/Nov2020test'
 climateDir <- 'C:/Users/smdevine/Desktop/Allowable_Depletion/model_scaffold/run_model/Mar2018'
 list.files(templateDir)
 
@@ -17,8 +17,6 @@ ETo <- read.csv(file.path(climateDir, 'SpatialCIMIS.ETo.QCpass.csv'), stringsAsF
 tapply(ETo$cell_170036, ETo$year, sum)
 Panoche_ETo_170036 <- ETo[, c('dates', 'cell_170036')]
 Panoche_ETo_2005 <- Panoche_ETo_170036[which(Panoche_ETo_170036$dates=='01_01_2005'):which(Panoche_ETo_170036$dates=='12_31_2005'),2] / 10 #to convert from cm to mm
-Panoche_ETo_170036[which(Panoche_ETo_170036$dates=='01_01_2005'):which(Panoche_ETo_170036$dates=='12_31_2005'),] / 10
-
 
 #modify soil profile according to VG params
 #test run with Hanford entry from modelling_database.R
@@ -143,6 +141,7 @@ write_atmos <- function(modelDir, flood_date, flood_duration, soil_name, PET, cl
 
 
 #SELECTOR.IN file creation
+#print_start was 4
 write_selector <- function(mat_number, flood_duration, modelDir, VGs, soil_name, MaxIT) { #flood_date,
   # if(!dir.exists(file.path(modelDir, soil_name))) {
   #   dir.create(file.path(modelDir, soil_name))
