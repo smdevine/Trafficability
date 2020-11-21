@@ -103,13 +103,15 @@ depth_X_properties <- function(horizon_SPC, upper_depth=0, depth, vars_of_intere
 #create spc object
 depths(horizons_modeled) <- cokey ~ hzn_top + hzn_bot
 
-# soils_modeled_30cm <- depth_X_properties(horizon_SPC = horizons_modeled, depth = 30)
+soils_modeled_30cm <- depth_X_properties(horizon_SPC = horizons_modeled, depth = 30)
 # dim(soils_modeled_30cm)
 
 soils_modeled_10cm <- depth_X_properties(horizon_SPC = horizons_modeled, depth = 10)
 dim(soils_modeled_10cm)
 
-soils_modeled_10_50cm <- depth_X_properties(horizon_SPC = horizons_modeled, upper_depth = 10, depth = 50)
+# soils_modeled_10_50cm <- depth_X_properties(horizon_SPC = horizons_modeled, upper_depth = 10, depth = 50)
+
+soils_modeled_50cm <- depth_X_properties(horizon_SPC = horizons_modeled, depth = 50)
 
 #check textural class--function taken from ssurgo_allCA_aggregation_awc_r.R
 textural.class.calc <- function(sand, silt, clay) {
@@ -133,20 +135,6 @@ textural.class.calc <- function(sand, silt, clay) {
                                                                                                     'undefined textural class'))))))))))))))
 }
 
-#30cm summary
-soils_modeled_30cm$texture.sums <- soils_modeled_30cm$clay_30cm + soils_modeled_30cm$silt_30cm + soils_modeled_30cm$sand_30cm
-sum(is.na(soils_modeled_30cm$texture.sums)) #45 are NA
-incomplete_texture <- soils_modeled_30cm[is.na(soils_modeled_30cm$texture.sums),]
-soils_modeled_30cm <- soils_modeled_30cm[!is.na(soils_modeled_30cm$texture.sums),]
-dim(soils_modeled_30cm) #5464 rows
-
-sum(soils_modeled_30cm$texture.sums > 100.1 | soils_modeled_30cm$texture.sums < 99.9 ) #no hay problemsas
-
-soils_modeled_30cm$textural_class <- textural.class.calc(sand = soils_modeled_30cm$sand_30cm, silt = soils_modeled_30cm$silt_30cm, clay = soils_modeled_30cm$clay_30cm)
-table(soils_modeled_30cm$textural_class)
-soils_modeled_30cm[soils_modeled_30cm$cokey==2688,]
-# write.csv(soils_modeled_30cm, file.path(tablesDir, 'soils_modeled_0_30cm_properties.csv'))
-
 #condense trafficability results from HYDRUS runs
 fnames_results <- list.files(summaryDir2, full.names = FALSE, recursive = FALSE)
 head(fnames_results)
@@ -157,94 +145,6 @@ head(cokeys_modeled)
 tail(cokeys_modeled) #5494 because 15 soils produced error messages
 length(cokeys_modeled)
 
-#for summary folder
-extract_0_10cm_trafficability <- function(x) {
-  results <- read.csv(file.path(summaryDir, x), row.names=1)
-  results[4,]
-}
-trafficability_0_10cm <- do.call(rbind, lapply(fnames_results, extract_0_10cm_trafficability))
-
-
-
-# trafficability_0_10cm[,1:4] <- lapply(trafficability_0_10cm[,1:4], function(x) as.numeric(x))
-lapply(trafficability_0_10cm, function(x) sum(is.na(x)))
-# write.csv(trafficability_0_10cm, file.path(tablesDir, 'trafficability_0_10cm_allSoils.csv'), row.names = TRUE)
-trafficability_0_10cm$textural_class_30cm <- soils_modeled_30cm$textural_class[match(row.names(trafficability_0_10cm), soils_modeled_30cm$cokey)]
-trafficability_0_10cm$ksat_30cm <- soils_modeled_30cm$ksat_30cm[match(row.names(trafficability_0_10cm), soils_modeled_30cm$cokey)]
-trafficability_0_10cm$alpha_30cm <- soils_modeled_30cm$alpha_30cm[match(row.names(trafficability_0_10cm), soils_modeled_30cm$cokey)]
-trafficability_0_10cm$theta_r_30cm <- soils_modeled_30cm$theta_r_30cm[match(row.names(trafficability_0_10cm), soils_modeled_30cm$cokey)]
-trafficability_0_10cm$theta_s_30cm <- soils_modeled_30cm$theta_s_30cm[match(row.names(trafficability_0_10cm), soils_modeled_30cm$cokey)]
-trafficability_0_10cm$clay_30cm <- soils_modeled_30cm$clay_30cm[match(row.names(trafficability_0_10cm), soils_modeled_30cm$cokey)]
-trafficability_0_10cm$silt_30cm <- soils_modeled_30cm$silt_30cm[match(row.names(trafficability_0_10cm), soils_modeled_30cm$cokey)]
-trafficability_0_10cm$sand_30cm <- soils_modeled_30cm$sand_30cm[match(row.names(trafficability_0_10cm), soils_modeled_30cm$cokey)]
-trafficability_0_10cm$oc_30cm <- soils_modeled_30cm$oc_30cm[match(row.names(trafficability_0_10cm), soils_modeled_30cm$cokey)]
-trafficability_0_10cm$bd_30cm <- soils_modeled_30cm$bd_13b_30cm[match(row.names(trafficability_0_10cm), soils_modeled_30cm$cokey)]
-trafficability_0_10cm$theta_0.33b_30cm <- soils_modeled_30cm$theta_0.33b_30cm[match(row.names(trafficability_0_10cm), soils_modeled_30cm$cokey)]
-trafficability_0_10cm$theta_15b_30cm <- soils_modeled_30cm$theta_15b_30cm[match(row.names(trafficability_0_10cm), soils_modeled_30cm$cokey)]
-trafficability_0_10cm$rosetta.model <- mod_database$Roseta.model[match(row.names(trafficability_0_10cm), mod_database$cokey)]
-trafficability_0_10cm$soil_name <- mod_database$taxonname[match(row.names(trafficability_0_10cm), mod_database$cokey)]
-
-tapply(trafficability_0_10cm$FC_0.9, trafficability_0_10cm$textural_class_30cm, mean, na.rm=TRUE)
-tapply(trafficability_0_10cm$FC_0.9, trafficability_0_10cm$textural_class_30cm, summary)
-tapply(trafficability_0_10cm$FC_0.95, trafficability_0_10cm$textural_class_30cm, mean, na.rm=TRUE)
-tapply(trafficability_0_10cm$FC_0.9, trafficability_0_10cm$rosetta.model, mean, na.rm=TRUE) #rosetta model 3 is biased
-table(trafficability_0_10cm$rosetta.model)
-#2    3    5 
-#344   10 5140 
-sum(!is.na(trafficability_0_10cm$FC_0.9) & trafficability_0_10cm$rosetta.model==5 & !is.na(trafficability_0_10cm$textural_class_30cm)) #4990
-
-#only consider rosetta model 5
-# trafficability_0_10cm <- trafficability_0_10cm[trafficability_0_10cm$rosetta.model==5,]
-# dim(trafficability_0_10cm) #5140
-lapply(trafficability_0_10cm, function(x) sum(is.na(x)))
-(5494-134)/5509 #97.3 % of all initial profiles returned results for 90% FC of 0-10 cm soil
-soil_name_counts <- table(trafficability_0_10cm$soil_name)[order(table(trafficability_0_10cm$soil_name), decreasing=TRUE)]
-soil_name_mas30 <- soil_name_counts[soil_name_counts >= 30]
-
-#find unusual results
-sum(trafficability_0_10cm$FC_0.9 > 20 & trafficability_0_10cm$textural_class_30cm=='sandy loam', na.rm = TRUE) #4 sandy loams greater than 20 days
-trafficability_0_10cm[trafficability_0_10cm$FC_0.9 > 20 & trafficability_0_10cm$textural_class_30cm=='sandy loam' & !is.na(trafficability_0_10cm$FC_0.9),]
-mean(trafficability_0_10cm$alpha_30cm[trafficability_0_10cm$textural_class_30cm=='sandy loam'], na.rm=TRUE)
-mean(trafficability_0_10cm$theta_0.33b_30cm[trafficability_0_10cm$textural_class_30cm=='sandy loam'], na.rm=TRUE)
-mean(trafficability_0_10cm$theta_15b_30cm[trafficability_0_10cm$textural_class_30cm=='sandy loam'], na.rm=TRUE)
-
-soilname_summary <- do.call(cbind, lapply(names(soil_name_mas30), function(x) as.matrix(summary(trafficability_0_10cm$FC_0.9[trafficability_0_10cm$soil_name==x]))[1:6,]))
-colnames(soilname_summary) <- names(soil_name_mas30) 
-soilname_summary <- rbind(soilname_summary, n=as.integer(sapply(names(soil_name_mas30), function(x) sum(!is.na(trafficability_0_10cm$FC_0.9[trafficability_0_10cm$soil_name==x])))))
-soilname_summary
-soilname_summary <- rbind(soilname_summary, mean_clay=sapply(names(soil_name_mas30), function(x) mean(trafficability_0_10cm$clay_30cm[trafficability_0_10cm$soil_name==x], na.rm=TRUE)))
-write.csv(soilname_summary, file.path(tablesDir, 'summary_by_soilname.csv'), row.names = TRUE)
-mod_database[mod_database$cokey==10610083,]
-
-textural_class_summary <- do.call(cbind, lapply(unique(trafficability_0_10cm$textural_class_30cm), function(x) as.matrix(summary(trafficability_0_10cm$FC_0.9[trafficability_0_10cm$textural_class_30cm==x]))[1:6,]))
-colnames(textural_class_summary) <- unique(trafficability_0_10cm$textural_class_30cm)
-textural_class_summary
-textural_class_summary <- rbind(textural_class_summary, n=as.integer(sapply(unique(trafficability_0_10cm$textural_class_30cm), function(x) sum(!is.na(trafficability_0_10cm$FC_0.9[trafficability_0_10cm$textural_class_30cm==x])))))
-textural_class_summary <- rbind(textural_class_summary, mean_clay=sapply(unique(trafficability_0_10cm$textural_class_30cm), function(x) mean(trafficability_0_10cm$clay_30cm[trafficability_0_10cm$textural_class_30cm==x], na.rm=TRUE)))
-textural_class_summary <- rbind(textural_class_summary, FC_0.95=sapply(unique(trafficability_0_10cm$textural_class_30cm), function(x) mean(trafficability_0_10cm$FC_0.95[trafficability_0_10cm$textural_class_30cm==x], na.rm=TRUE)))
-textural_class_summary <- rbind(textural_class_summary, FC_0.85=sapply(unique(trafficability_0_10cm$textural_class_30cm), function(x) mean(trafficability_0_10cm$FC_0.85[trafficability_0_10cm$textural_class_30cm==x], na.rm=TRUE)))
-textural_class_summary <- rbind(textural_class_summary, FC_0.8=sapply(unique(trafficability_0_10cm$textural_class_30cm), function(x) mean(trafficability_0_10cm$FC_0.8[trafficability_0_10cm$textural_class_30cm==x], na.rm=TRUE)))
-colnames(textural_class_summary)[order(textural_class_summary[8,])]
-textural_class_summary <- textural_class_summary[,order(textural_class_summary[8,])]
-row.names(textural_class_summary)
-write.csv(textural_class_summary, file.path(tablesDir, 'summary_by_textural_class.csv'), row.names = TRUE)
-
-plot(log(trafficability_0_10cm$ksat_30cm), trafficability_0_10cm$FC_0.9)
-plot(trafficability_0_10cm$alpha_30cm, trafficability_0_10cm$FC_0.9)
-plot(trafficability_0_10cm$clay_30cm, trafficability_0_10cm$FC_0.9)
-plot(trafficability_0_10cm$sand_30cm, trafficability_0_10cm$FC_0.9)
-plot(trafficability_0_10cm$silt_30cm, trafficability_0_10cm$FC_0.9)
-plot(trafficability_0_10cm$theta_0.33b_30cm, trafficability_0_10cm$FC_0.9)
-plot(trafficability_0_10cm$theta_15b_30cm, trafficability_0_10cm$FC_0.9)
-
-summary(lm(FC_0.9 ~ clay_30cm, data = trafficability_0_10cm)) #Multiple R-squared:  0.4762 if rosetta model 5
-summary(lm(FC_0.9 ~ clay_30cm+sand_30cm, data = trafficability_0_10cm)) #Multiple R-squared:  0.4813 if rosetta model 5
-summary(lm(FC_0.9 ~ clay_30cm+sand_30cm+bd_30cm, data = trafficability_0_10cm)) #Multiple R-squared:  0.5059 if rosetta model 5
-summary(lm(FC_0.9 ~ clay_30cm+sand_30cm+bd_30cm+theta_0.33b_30cm, data = trafficability_0_10cm)) #Multiple R-squared:  0.5844 if rosetta model 5
-summary(lm(FC_0.9 ~ clay_30cm+sand_30cm+bd_30cm+theta_0.33b_30cm+theta_15b_30cm, data = trafficability_0_10cm)) #Multiple R-squared:  0.5988 if rosetta model 5
-
-# write.csv(trafficability_0_10cm, file.path(tablesDir, 'trafficability_0_10cm_rosetta5_0_30cm_properties.csv'), row.names = TRUE)
-
 #add textural class to 10-50 cm summary
 soils_modeled_10_50cm$texture.sums <- soils_modeled_10_50cm$clay_50cm + soils_modeled_10_50cm$silt_50cm + soils_modeled_10_50cm$sand_50cm
 sum(is.na(soils_modeled_10_50cm$texture.sums)) #196 are NA
@@ -254,7 +154,7 @@ summary(soils_modeled_10_50cm$texture.sums)
 soils_modeled_10_50cm$textural_class <- textural.class.calc(sand = soils_modeled_10_50cm$sand_50cm, silt = soils_modeled_10_50cm$silt_50cm, clay = soils_modeled_10_50cm$clay_50cm)
 table(soils_modeled_10_50cm$textural_class)
 
-#do the same with a 0-10 cm soil property summary
+#analysis with a 0-10 cm soil property summary
 soils_modeled_10cm$texture.sums <- soils_modeled_10cm$clay_10cm + soils_modeled_10cm$silt_10cm + soils_modeled_10cm$sand_10cm
 sum(is.na(soils_modeled_10cm$texture.sums)) #0 are NA
 sum(soils_modeled_10cm$texture.sums > 100.1 | soils_modeled_10cm$texture.sums < 99.9 ) #no hay problemsas
@@ -502,3 +402,171 @@ for (i in seq_along(textural_classes)) {
   print(textural_classes[i])
   print(test)
 }
+
+#analysis to do a summary by 0-30 cm textural classes
+#analysis with a 0-10 cm soil property summary
+soils_modeled_30cm$textural_class <- textural.class.calc(sand = soils_modeled_30cm$sand_30cm, silt = soils_modeled_30cm$silt_30cm, clay = soils_modeled_30cm$clay_30cm)
+table(soils_modeled_30cm$textural_class)
+soils_modeled_30cm$texture.sums <- soils_modeled_30cm$clay_30cm + soils_modeled_30cm$silt_30cm + soils_modeled_30cm$sand_30cm
+sum(is.na(soils_modeled_30cm$texture.sums)) #45 are NA
+sum(soils_modeled_30cm$texture.sums > 100.1 | soils_modeled_30cm$texture.sums < 99.9, na.rm = TRUE) #no hay problemsas
+
+# write.csv(soils_modeled_30cm, file.path(tablesDir, 'soils_modeled_0_30cm_properties.csv'))
+
+#condense trafficability results from HYDRUS runs using summaryDir2
+#for summary_v2 folder
+extract_0_10cm_trafficability_v2 <- function(x) {
+  results <- read.csv(file.path(summaryDir2, x), row.names=1, na.strings = 'numeric(0)')
+}
+fnames_results <- list.files(summaryDir2, full.names = FALSE, recursive = FALSE)
+head(fnames_results)
+tail(fnames_results)
+cokeys_modeled <- sub(pattern = 'soil_', replacement = '', x = fnames_results)
+cokeys_modeled <- sub(pattern = '_results.csv', replacement = '', x = cokeys_modeled)
+head(cokeys_modeled)
+tail(cokeys_modeled) 
+length(cokeys_modeled) #5494 because 15 soils produced error messages
+trafficability_0_10cm_v2 <- lapply(fnames_results, extract_0_10cm_trafficability_v2)
+length(trafficability_0_10cm_v2)
+names(trafficability_0_10cm_v2) <- cokeys_modeled
+
+#approach to summarize data on summaryDir2
+dim(soils_modeled_30cm) #5509
+soils_modeled_30cm <- soils_modeled_30cm[soils_modeled_30cm$cokey %in% names(trafficability_0_10cm_v2),]
+dim(soils_modeled_30cm) #5447
+soils_modeled_30cm$traff_def_opt1 <- FC_thresholds$Option_1[match(soils_modeled_30cm$textural_class, FC_thresholds$Textural.Class)]
+soils_modeled_30cm$traff_def_opt2 <- FC_thresholds$Option_2[match(soils_modeled_30cm$textural_class, FC_thresholds$Textural.Class)]
+soils_modeled_30cm$traff_def_opt3 <- FC_thresholds$Option_3[match(soils_modeled_30cm$textural_class, FC_thresholds$Textural.Class)]
+soils_modeled_30cm$traff_def_opt4 <- FC_thresholds$Option_4[match(soils_modeled_30cm$textural_class, FC_thresholds$Textural.Class)]
+head(soils_modeled_30cm)
+theta_seq <- as.character(seq(0.95, 0.7, -0.01)) #how results are order in trafficability_0_10cm_v2
+
+#exclude 
+no_texture_cokeys <- soils_modeled_30cm$cokey[is.na(soils_modeled_30cm$textural_class)]
+no_texture_cokeys
+trafficability_0_10cm_v2 <- trafficability_0_10cm_v2[-which(names(trafficability_0_10cm_v2) %in% no_texture_cokeys)]
+soils_modeled_30cm <- soils_modeled_30cm[!is.na(soils_modeled_30cm$textural_class),]
+
+#exclude silt cokeys
+silt_cokeys <- soils_modeled_30cm$cokey[soils_modeled_30cm$textural_class=='silt'] #because no plasticity based guide for these
+trafficability_0_10cm_v2 <- trafficability_0_10cm_v2[-which(names(trafficability_0_10cm_v2) %in% silt_cokeys)]
+length(trafficability_0_10cm_v2) #5447
+soils_modeled_30cm <- soils_modeled_30cm[-which(soils_modeled_30cm$textural_class=='silt'),] #use which because there are NA textural class
+dim(soils_modeled_30cm) #5447
+match_test <- sapply(seq_along(soils_modeled_30cm$cokey), function(i) names(trafficability_0_10cm_v2)[i] == soils_modeled_30cm$cokey[i])
+all(match_test) #everything in order
+# test <- sapply(1:1200, function(i) {trafficability_0_10cm_v2[[i]][as.character(soils_modeled_30cm$traff_def_opt1[i])==theta_seq,]})
+# test
+# rm(test)
+
+soils_modeled_30cm$result_opt1 <- sapply(seq_along(soils_modeled_30cm$traff_def_opt1), function(i) {trafficability_0_10cm_v2[[i]][as.character(soils_modeled_30cm$traff_def_opt1[i])==theta_seq,]})
+summary(soils_modeled_30cm$result_opt1) #640 NA's
+soils_modeled_30cm$result_opt2 <- sapply(seq_along(soils_modeled_30cm$traff_def_opt2), function(i) {trafficability_0_10cm_v2[[i]][as.character(soils_modeled_30cm$traff_def_opt2[i])==theta_seq,]})
+summary(soils_modeled_30cm$result_opt2) #140 NA's
+soils_modeled_30cm$result_opt3 <- sapply(seq_along(soils_modeled_30cm$traff_def_opt3), function(i) {trafficability_0_10cm_v2[[i]][as.character(soils_modeled_30cm$traff_def_opt3[i])==theta_seq,]})
+summary(soils_modeled_30cm$result_opt3) #148 NA's
+soils_modeled_30cm$result_opt4 <- sapply(seq_along(soils_modeled_30cm$traff_def_opt4), function(i) {trafficability_0_10cm_v2[[i]][as.character(soils_modeled_30cm$traff_def_opt4[i])==theta_seq,]})
+summary(soils_modeled_30cm$result_opt4) #141 NAs
+
+#limit to rosetta 5 profiles
+soils_modeled_30cm <- soils_modeled_30cm[soils_modeled_30cm$Rosetta.model_30cm==5,]
+dim(soils_modeled_30cm) #4979
+5447-4979 #another 468 dropped
+
+traffic2_by_texture_lm <- lm(result_opt2 ~ textural_class, data = soils_modeled_30cm)
+summary(traffic2_by_texture_lm) #r2=0.6454, RSE=5.567
+traffic3_by_texture_lm <- lm(result_opt3 ~ textural_class, data = soils_modeled_30cm)
+summary(traffic3_by_texture_lm) #r^2=0.6719, RSE=6.07
+
+summary(lm(result_opt2 ~ textural_class + bd_13b_30cm, data = soils_modeled_30cm)) #r2=0.6458, rse=5.564
+summary(lm(result_opt2 ~ textural_class + bd_13b_30cm + oc_30cm, data = soils_modeled_30cm)) #r2=0.6614, rse=5.434
+# summary(lm(result_opt2 ~ textural_class + textural_class_10_50cm, data = soils_modeled_30cm)) #r2=0.6759, rse=5.288, 302 are NA
+summary(lm(result_opt2 ~ clay_30cm + sand_30cm + bd_13b_30cm, data = soils_modeled_30cm)) #r2=0.4944, rse=6.642
+summary(lm(result_opt2 ~ clay_30cm + sand_30cm + bd_13b_30cm + theta_0.33b_30cm + theta_15b_30cm, data = soils_modeled_30cm))
+summary(lm(result_opt2 ~ ksat_30cm, data = soils_modeled_30cm)) #r2=0.06, rse=9.051
+# summary(lm(result_opt2 ~ ksat_30cm + ksat_10_50cm, data = soils_modeled_30cm)) #r2=0.06094, rse=8.985
+# summary(lm(result_opt2 ~ textural_class + textural_class_10_50cm + bd_13b_30cm + oc_30cm, data = soils_modeled_30cm)) #r2=0.6922, rse=5.145, 355 are NA
+summary(lm(result_opt2 ~ ksat_30cm + textural_class, data=soils_modeled_30cm)) #r2=0.6463, rse=5.56
+
+
+summarize_by_texture <- function(traff_def) {
+  textural_class_summary <- do.call(cbind, lapply(unique(soils_modeled_30cm$textural_class), function(x) as.matrix(summary(soils_modeled_30cm[[traff_def]][soils_modeled_30cm$textural_class==x]))[1:6,]))
+  colnames(textural_class_summary) <- unique(soils_modeled_30cm$textural_class)
+  textural_class_summary <- rbind(textural_class_summary, n=as.integer(sapply(unique(soils_modeled_30cm$textural_class), function(x) sum(!is.na(soils_modeled_30cm[[traff_def]][soils_modeled_30cm$textural_class==x])))))
+  textural_class_summary <- rbind(textural_class_summary, mean_clay=sapply(unique(soils_modeled_30cm$textural_class), function(x) mean(soils_modeled_30cm$clay_30cm[soils_modeled_30cm$textural_class==x], na.rm=TRUE)))
+  textural_class_summary <- rbind(textural_class_summary, Not_Determined=as.integer(sapply(unique(soils_modeled_30cm$textural_class), function(x) sum(is.na(soils_modeled_30cm[[traff_def]][soils_modeled_30cm$textural_class==x])))))
+  colnames(textural_class_summary)[order(textural_class_summary[8,])]
+  textural_class_summary <- textural_class_summary[,order(textural_class_summary[8,])]
+  print(textural_class_summary)
+  write.csv(textural_class_summary, file.path(tablesDir, paste0('summary_by_textural_class_0_30cm_', traff_def, '.csv')), row.names = TRUE)
+}
+summarize_by_texture('result_opt1')
+summarize_by_texture('result_opt2')
+summarize_by_texture('result_opt3')
+summarize_by_texture('result_opt4')
+
+textural_classes <- unique(soils_modeled_30cm$textural_class)
+names(textural_classes) <- textural_classes
+quantile_breaks_result2 <- lapply(textural_classes, function(x) {
+  quantile(soils_modeled_30cm$result_opt2[soils_modeled_30cm$textural_class==x], probs = c(0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.975, 0.99), na.rm = TRUE)
+})
+quantile_breaks_result2 <- rbind(as.data.frame(quantile_breaks_result2), sd=sapply(textural_classes, function(x) {sd(soils_modeled_30cm$result_opt2[soils_modeled_30cm$textural_class==x], na.rm=TRUE)}), mean=sapply(textural_classes, function(x) {mean(soils_modeled_30cm$result_opt2[soils_modeled_30cm$textural_class==x], na.rm=TRUE)}))
+quantile_breaks_result2[6,]
+quantile_breaks_result2 <- quantile_breaks_result2[,order(quantile_breaks_result2[6,])]
+write.csv(quantile_breaks_result2, file.path(tablesDir, 'quantiles_result2_0_30cm_properties_rosetta5.csv'), row.names = TRUE)
+
+#now look at BD as factor
+for (i in seq_along(textural_classes)) {
+  plot(soils_modeled_30cm$bd_13b_30cm[soils_modeled_30cm$textural_class==textural_classes[i]], soils_modeled_30cm$result_opt2[soils_modeled_30cm$textural_class==textural_classes[i]], main=textural_classes[i])
+  print(textural_classes[i])
+  print(summary(lm(soils_modeled_30cm$result_opt2[soils_modeled_30cm$textural_class==textural_classes[i]] ~ soils_modeled_30cm$bd_13b_30cm[soils_modeled_30cm$textural_class==textural_classes[i]])))
+}
+#now look at Ks as factor
+for (i in seq_along(textural_classes)) {
+  plot(soils_modeled_30cm$ksat_30cm[soils_modeled_30cm$textural_class==textural_classes[i]], soils_modeled_30cm$result_opt2[soils_modeled_30cm$textural_class==textural_classes[i]], main=textural_classes[i])
+  print(textural_classes[i])
+  print(summary(lm(soils_modeled_30cm$result_opt2[soils_modeled_30cm$textural_class==textural_classes[i]] ~ soils_modeled_30cm$ksat_30cm[soils_modeled_30cm$textural_class==textural_classes[i]])))
+}
+#now look at h_fc assumption as factor
+for (i in seq_along(textural_classes)) {
+  plot(soils_modeled_30cm$h_fc_30cm[soils_modeled_30cm$textural_class==textural_classes[i]], soils_modeled_30cm$result_opt2[soils_modeled_30cm$textural_class==textural_classes[i]], main=textural_classes[i], xlim=c(-500,-50))
+  print(textural_classes[i])
+  print(summary(lm(soils_modeled_30cm$result_opt2[soils_modeled_30cm$textural_class==textural_classes[i]] ~ soils_modeled_30cm$h_fc_30cm[soils_modeled_30cm$textural_class==textural_classes[i]])))
+}
+#now look at %clay within each textural class
+for (i in seq_along(textural_classes)) {
+  plot(soils_modeled_30cm$clay_30cm[soils_modeled_30cm$textural_class==textural_classes[i]], soils_modeled_30cm$result_opt2[soils_modeled_30cm$textural_class==textural_classes[i]], main=textural_classes[i])
+  print(textural_classes[i])
+  print(summary(lm(soils_modeled_30cm$result_opt2[soils_modeled_30cm$textural_class==textural_classes[i]] ~ soils_modeled_30cm$clay_30cm[soils_modeled_30cm$textural_class==textural_classes[i]])))
+}
+#now look at wilting point within each textural class
+for (i in seq_along(textural_classes)) {
+  plot(soils_modeled_30cm$theta_15b_30cm[soils_modeled_30cm$textural_class==textural_classes[i]], soils_modeled_30cm$result_opt2[soils_modeled_30cm$textural_class==textural_classes[i]], main=textural_classes[i])
+  print(textural_classes[i])
+  print(summary(lm(soils_modeled_30cm$result_opt2[soils_modeled_30cm$textural_class==textural_classes[i]] ~ soils_modeled_30cm$theta_15b_30cm[soils_modeled_30cm$textural_class==textural_classes[i]])))
+}
+#now look at theta at 0.33b within each textural class
+for (i in seq_along(textural_classes)) {
+  plot(soils_modeled_30cm$theta_0.33b_30cm[soils_modeled_30cm$textural_class==textural_classes[i]], soils_modeled_30cm$result_opt2[soils_modeled_30cm$textural_class==textural_classes[i]], main=textural_classes[i])
+  print(textural_classes[i])
+  print(summary(lm(soils_modeled_30cm$result_opt2[soils_modeled_30cm$textural_class==textural_classes[i]] ~ soils_modeled_30cm$theta_0.33b_30cm[soils_modeled_30cm$textural_class==textural_classes[i]])))
+}
+#now look at theta at 0.33b within each textural class
+for (i in seq_along(textural_classes)) {
+  plot(soils_modeled_30cm$theta_fc_30cm[soils_modeled_30cm$textural_class==textural_classes[i]], soils_modeled_30cm$result_opt2[soils_modeled_30cm$textural_class==textural_classes[i]], main=textural_classes[i])
+  print(textural_classes[i])
+  print(summary(lm(soils_modeled_30cm$result_opt2[soils_modeled_30cm$textural_class==textural_classes[i]] ~ soils_modeled_30cm$theta_fc_30cm[soils_modeled_30cm$textural_class==textural_classes[i]])))
+}
+#now look at silt within each textural clas
+for (i in seq_along(textural_classes)) {
+  plot(soils_modeled_30cm$silt_30cm[soils_modeled_30cm$textural_class==textural_classes[i]], soils_modeled_30cm$result_opt2[soils_modeled_30cm$textural_class==textural_classes[i]], main=textural_classes[i])
+  print(textural_classes[i])
+  print(summary(lm(soils_modeled_30cm$result_opt2[soils_modeled_30cm$textural_class==textural_classes[i]] ~ soils_modeled_30cm$silt_30cm[soils_modeled_30cm$textural_class==textural_classes[i]])))
+}
+#now look at sand within each class
+for (i in seq_along(textural_classes)) {
+  plot(soils_modeled_30cm$sand_30cm[soils_modeled_30cm$textural_class==textural_classes[i]], soils_modeled_30cm$result_opt2[soils_modeled_30cm$textural_class==textural_classes[i]], main=textural_classes[i])
+  print(textural_classes[i])
+  print(summary(lm(soils_modeled_30cm$result_opt2[soils_modeled_30cm$textural_class==textural_classes[i]] ~ soils_modeled_30cm$sand_30cm[soils_modeled_30cm$textural_class==textural_classes[i]])))
+}
+plot(soils_modeled_30cm$clay_30cm, soils_modeled_30cm$result_opt2)
