@@ -201,7 +201,6 @@ length(trafficability_0_10cm_v2)
 names(trafficability_0_10cm_v2) <- cokeys_modeled
 
 #approach to summarize data on summaryDir2
-list.files(tablesDir)
 dim(soils_modeled_10cm) #5509
 soils_modeled_10cm <- soils_modeled_10cm[soils_modeled_10cm$cokey %in% names(trafficability_0_10cm_v2),]
 dim(soils_modeled_10cm) #5494
@@ -234,12 +233,12 @@ soils_modeled_10cm$result_opt4 <- sapply(seq_along(soils_modeled_10cm$traff_def_
 summary(soils_modeled_10cm$result_opt4)
 
 #limit to rosetta model 5 results
-table(soils_modeled_10cm$Rosetta.model_10cm)
-sum(soils_modeled_10cm$Rosetta.model_10cm==5, na.rm = TRUE) #5130
-sum(soils_modeled_15cm$Rosetta.model_15cm==5, na.rm = TRUE) #5132
-sum(soils_modeled_30cm$Rosetta.model_30cm==5, na.rm = TRUE) #4994
-soils_modeled_10cm <- soils_modeled_10cm[soils_modeled_10cm$Rosetta.model_10cm==5,]
-dim(soils_modeled_10cm) #5130
+# table(soils_modeled_10cm$Rosetta.model_10cm)
+# sum(soils_modeled_10cm$Rosetta.model_10cm==5, na.rm = TRUE) #5130
+# sum(soils_modeled_15cm$Rosetta.model_15cm==5, na.rm = TRUE) #5132
+# sum(soils_modeled_30cm$Rosetta.model_30cm==5, na.rm = TRUE) #4994
+# soils_modeled_10cm <- soils_modeled_10cm[soils_modeled_10cm$Rosetta.model_10cm==5,]
+# dim(soils_modeled_10cm) #5130
 
 #write rosetta 5 results to disk
 write.csv(soils_modeled_10cm, file.path(tablesDir, 'trafficability_0_10cm_rosetta5_0_10cm_properties.csv'))
@@ -248,10 +247,30 @@ write.csv(soils_modeled_10cm, file.path(tablesDir, 'trafficability_0_10cm_rosett
 textural_classes <- unique(soils_modeled_10cm$textural_class)
 names(textural_classes) <- textural_classes
 
+#look at unique soil profile instances
+# soils_modeled_10cm$properties <- paste(soils_modeled_10cm$clay_10cm, soils_modeled_10cm$silt_10cm, soils_modeled_10cm$sand_10cm, soils_modeled_10cm$bd_13b_10cm, soils_modeled_10cm$theta_0.33b_10cm, soils_modeled_10cm$theta_15b_10cm, soils_modeled_10cm$result_opt2, sep = ',')
+soils_modeled_10cm$properties <- paste(soils_modeled_10cm$clay_10cm, soils_modeled_10cm$silt_10cm, soils_modeled_10cm$sand_10cm, soils_modeled_10cm$result_opt2, sep = ',')
+length(unique(soils_modeled_10cm$properties)) #3144 compared to 3107 in 0-30 cm dataset for rosetta 5 only; only 2798 if only consider sand, silt, and clay and all rosetta models
+length(unique(soils_modeled_10cm$properties[soils_modeled_10cm$Rosetta.model_10cm==5]))
+unique_properties <- unique(soils_modeled_10cm$properties)
+soils_modeled_10cm[unique_properties[4]==soils_modeled_10cm$properties,]
+
+soils_modeled_10cm_revised <- soils_modeled_10cm[match(unique_properties, soils_modeled_10cm$properties), ]
+dim(soils_modeled_10cm_revised) #3144 compared to 3107 in 0-30 cm based summary
+table(soils_modeled_10cm_revised$textural_class)
+lapply(textural_classes, function(x) summary(soils_modeled_10cm_revised$result_opt2[soils_modeled_10cm_revised$textural_class==x]))
+lapply(textural_classes, function(x) summary(soils_modeled_10cm$result_opt2[soils_modeled_10cm$textural_class==x]))
+lapply(textural_classes, function(x) summary(soils_modeled_10cm$result_opt2[soils_modeled_10cm$textural_class==x])[3] - summary(soils_modeled_10cm_revised$result_opt2[soils_modeled_10cm_revised$textural_class==x])[3]) #only silty clay stats are changed appreciably
+lapply(textural_classes, function(x) summary(soils_modeled_10cm_revised$result_opt2[soils_modeled_10cm_revised$textural_class==x & soils_modeled_10cm_revised$Rosetta.model_10cm==5])[3] - summary(soils_modeled_10cm_revised$result_opt2[soils_modeled_10cm_revised$textural_class==x])[3])
+lapply(textural_classes, function(x) summary(soils_modeled_10cm_revised$result_opt2[soils_modeled_10cm_revised$textural_class==x & soils_modeled_10cm_revised$Rosetta.model_10cm==5])[3] - summary(soils_modeled_10cm_revised$result_opt2[soils_modeled_10cm_revised$textural_class==x & soils_modeled_10cm_revised$Rosetta.model_10cm==2])[3])
+
+#limit to unique
+soils_modeled_10cm <- soils_modeled_10cm_revised
+
 #get cokeys for clay soils with no results
 soils_modeled_10cm[soils_modeled_10cm$textural_class=='clay' & is.na(soils_modeled_10cm$result_opt1),]
 clay_cokeys_noresults <- soils_modeled_10cm$cokey[soils_modeled_10cm$textural_class=='clay' & is.na(soils_modeled_10cm$result_opt3)]
-length(clay_cokeys_noresults) #49
+length(clay_cokeys_noresults) #49; with unique, only 14
 write.csv(clay_cokeys_noresults, file.path(tablesDir, 'clay_cokeys_no_results.csv'))
 
 #add 10-50 cm info
@@ -272,7 +291,7 @@ tapply(soils_modeled_10cm$cokey[as.integer(soils_modeled_10cm$cokey) < 100000], 
 
 #look at clays by themselves
 clays_modeled_10cm <- soils_modeled_10cm[soils_modeled_10cm$textural_class=='clay',]
-dim(clays_modeled_10cm) #347
+dim(clays_modeled_10cm) #225
 clay_quartiles <- quantile(clays_modeled_10cm$result_opt2, probs = c(0.25, 0.5, 0.75), na.rm=TRUE)
 clays_modeled_10cm$quartile_result2 <- ifelse(is.na(clays_modeled_10cm$result_opt2), 'not determined', ifelse(clays_modeled_10cm$result_opt2 <= clay_quartiles[1], 1, ifelse(clays_modeled_10cm$result_opt2 <= clay_quartiles[2], 2, ifelse(clays_modeled_10cm$result_opt2 <= clay_quartiles[3], 3, 4))))
 tapply(clays_modeled_10cm$clay_10cm, clays_modeled_10cm$quartile_result2, summary)
@@ -347,7 +366,7 @@ summarize_by_texture <- function(traff_def) {
   colnames(textural_class_summary)[order(textural_class_summary[8,])]
 textural_class_summary <- textural_class_summary[,order(textural_class_summary[8,])]
   print(textural_class_summary)
-  write.csv(textural_class_summary, file.path(tablesDir, paste0('summary_by_textural_class_0_10cm_', traff_def, '_rosetta5.csv')), row.names = TRUE)
+  write.csv(textural_class_summary, file.path(tablesDir, paste0('summary_by_textural_class_0_10cm_', traff_def, '_unique.csv')), row.names = TRUE)
 }
 summarize_by_texture('result_opt1')
 summarize_by_texture('result_opt2')
@@ -394,7 +413,7 @@ quantile_breaks_result2 <- lapply(textural_classes, function(x) {
 })
 quantile_breaks_result2 <- rbind(as.data.frame(quantile_breaks_result2), sd=sapply(textural_classes, function(x) {sd(soils_modeled_10cm$result_opt2[soils_modeled_10cm$textural_class==x], na.rm=TRUE)}), mean=sapply(textural_classes, function(x) {mean(soils_modeled_10cm$result_opt2[soils_modeled_10cm$textural_class==x], na.rm=TRUE)}))
 quantile_breaks_result2 <- quantile_breaks_result2[,order(quantile_breaks_result2[6,])]
-write.csv(quantile_breaks_result2, file.path(tablesDir, 'quantiles_result2_rosetta5.csv'), row.names = TRUE)
+write.csv(quantile_breaks_result2, file.path(tablesDir, 'quantiles_result2_unique.csv'), row.names = TRUE)
 for (i in seq_along(textural_classes)) {
   if (length(unique(soils_modeled_10cm$textural_class_10_50cm[soils_modeled_10cm$textural_class==textural_classes[i]])) >= 2) {
     print(textural_classes[i])
@@ -451,7 +470,6 @@ for (i in seq_along(textural_classes)) {
   print(textural_classes[i])
   print(summary(lm(soils_modeled_10cm$result_opt2[soils_modeled_10cm$textural_class==textural_classes[i]] ~ soils_modeled_10cm$theta_0.33b_10cm[soils_modeled_10cm$textural_class==textural_classes[i]])))
 }
-
 
 #now look at BD as factor
 for (i in seq_along(textural_classes)) {
@@ -632,21 +650,23 @@ soils_modeled_30cm$result_opt4 <- sapply(seq_along(soils_modeled_30cm$traff_def_
 summary(soils_modeled_30cm$result_opt4) #141 NAs
 
 #limit to rosetta 5 profiles
-soils_modeled_30cm <- soils_modeled_30cm[soils_modeled_30cm$Rosetta.model_30cm==5,]
-dim(soils_modeled_30cm) #4979
-5447-4979 #another 468 dropped
+# soils_modeled_30cm <- soils_modeled_30cm[soils_modeled_30cm$Rosetta.model_30cm==5,]
+# dim(soils_modeled_30cm) #4979
+# 5447-4979 #another 468 dropped
 textural_classes <- unique(soils_modeled_30cm$textural_class)
 names(textural_classes) <- textural_classes
 
 #look at how many truly unique 0-30 cm properties exist
-soils_modeled_30cm$properties <- paste(soils_modeled_30cm$clay_30cm, soils_modeled_30cm$silt_30cm, soils_modeled_30cm$sand_30cm, soils_modeled_30cm$bd_13b_30cm, soils_modeled_30cm$theta_0.33b_30cm, soils_modeled_30cm$theta_15b_30cm, soils_modeled_30cm$result_opt2, sep = ',')
-length(unique(soils_modeled_30cm$properties)) #3107
+# soils_modeled_30cm$properties <- paste(soils_modeled_30cm$clay_30cm, soils_modeled_30cm$silt_30cm, soils_modeled_30cm$sand_30cm, soils_modeled_30cm$bd_13b_30cm, soils_modeled_30cm$theta_0.33b_30cm, soils_modeled_30cm$theta_15b_30cm, soils_modeled_30cm$result_opt2, sep = ',')
+soils_modeled_30cm$properties <- paste(soils_modeled_30cm$clay_30cm, soils_modeled_30cm$silt_30cm, soils_modeled_30cm$sand_30cm, soils_modeled_30cm$result_opt2, sep = ',')
+length(unique(soils_modeled_30cm$properties)) #3107; 3143 if all rosetta models
 unique_properties <- unique(soils_modeled_30cm$properties)
 soils_modeled_30cm[match(unique_properties[3], soils_modeled_30cm$properties),]
 soils_modeled_30cm[unique_properties[4]==soils_modeled_30cm$properties,]
 
 soils_modeled_30cm_revised <- soils_modeled_30cm[match(unique_properties, soils_modeled_30cm$properties), ]
-dim(soils_modeled_30cm_revised) #3107
+dim(soils_modeled_30cm_revised) #3107; 3143
+table(soils_modeled_30cm_revised$Rosetta.model_30cm)
 table(soils_modeled_30cm_revised$textural_class)
 lapply(textural_classes, function(x) summary(soils_modeled_30cm_revised$result_opt2[soils_modeled_30cm_revised$textural_class==x]))
 
