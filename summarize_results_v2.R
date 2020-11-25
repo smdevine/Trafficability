@@ -1,5 +1,6 @@
 library(aqp)
 workDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/data from Stathis'
+WBDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/Oct2020test/water_blnc_check'
 summaryDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/Oct2020test/summary'
 summaryDir2 <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/Oct2020test/summary_v2'
 tablesDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/Oct2020test/tables'
@@ -47,7 +48,9 @@ soil_by_cokey <- function(cokey) {
   colnames(VGs) <- NULL
   depths <- soil[,8:9]
   depths$hzn_bot[length(depths$hzn_bot)] <- 201
-  list(soil=soil, VGs=VGs, depths=depths, mat_number=mat_number)
+  depths_calc <- depths
+  depths_calc$hzn_bot[length(depths_calc$hzn_bot)] <- 200
+  list(soil=soil, VGs=VGs, depths=depths, mat_number=mat_number, theta_s=sum(soil$teta_s * (depths_calc$hzn_bot - depths_calc$hzn_top)))
 }
 
 unique_cokeys <- unique(mod_database$cokey)
@@ -81,7 +84,7 @@ names(soils_w_topsoil[!soils_w_topsoil])
 
 soil_data <- soil_data[!(names(soil_data) %in% names(soils_w_topsoil[!soils_w_topsoil]))]
 length(soil_data) #5509 now
-
+head(soil_data)
 final_cokeys <- as.integer(gsub('soil_', '', names(soil_data)))
 
 horizons_modeled <- mod_database[mod_database$cokey %in% final_cokeys, ]
@@ -241,11 +244,27 @@ summary(soils_modeled_10cm$result_opt4)
 # dim(soils_modeled_10cm) #5130
 
 #write rosetta 5 results to disk
-write.csv(soils_modeled_10cm, file.path(tablesDir, 'trafficability_0_10cm_rosetta5_0_10cm_properties.csv'))
+# write.csv(soils_modeled_10cm, file.path(tablesDir, 'trafficability_0_10cm_rosetta5_0_10cm_properties.csv'))
 
 #get unique textural classes
 textural_classes <- unique(soils_modeled_10cm$textural_class)
 names(textural_classes) <- textural_classes
+
+#add water balance QC info
+water_blnc_results <- read.csv(file.path(WBDir, 'water_blnc_results.csv'), stringsAsFactors = FALSE)
+sum(water_blnc_results$runoff_PF_cm > 0, na.rm = TRUE)
+sum(water_blnc_results$infiltration_PF_cm > 0, na.rm = TRUE) #7
+soils_modeled_10cm$wb_rel_pct <- water_blnc_results$water_balance_rel_pct[match(soils_modeled_10cm$cokey, water_blnc_results$cokey)]
+soils_modeled_10cm$wb_PF_cm <- water_blnc_results$water_balance_PF_cm[match(soils_modeled_10cm$cokey, water_blnc_results$cokey)]
+summary(soils_modeled_10cm$wb_PF_cm)
+soils_modeled_10cm$wb_PF_cm <- abs(soils_modeled_10cm$wb_PF_cm)
+soils_modeled_10cm$water_input_error <- water_blnc_results$water_input_error[match(soils_modeled_10cm$cokey, water_blnc_results$cokey)]
+soils_modeled_10cm$theta_pf <- water_blnc_results$thetaS_ck[match(soils_modeled_10cm$cokey, water_blnc_results$cokey)] #thetaS_max is max from time-series; thetaS_ck is from day 5 at end of flooding event
+soils_modeled_10cm$theta_s_profile_cm <- sapply(paste0('soil_', soils_modeled_10cm$cokey), function(x) soil_data[[match(x, names(soil_data))]]$theta_s)
+soils_modeled_10cm$pf_theta_sat_check <- soils_modeled_10cm$theta_s_profile_cm - soils_modeled_10cm$theta_pf
+summary(soils_modeled_10cm$pf_theta_sat_check)
+soils_modeled_10cm$sat_pct_pf <- round(100*(soils_modeled_10cm$theta_s_profile_cm - soils_modeled_10cm$pf_theta_sat_check) / soils_modeled_10cm$theta_s_profile_cm, 2)
+
 
 #look at unique soil profile instances
 # soils_modeled_10cm$properties <- paste(soils_modeled_10cm$clay_10cm, soils_modeled_10cm$silt_10cm, soils_modeled_10cm$sand_10cm, soils_modeled_10cm$bd_13b_10cm, soils_modeled_10cm$theta_0.33b_10cm, soils_modeled_10cm$theta_15b_10cm, soils_modeled_10cm$result_opt2, sep = ',')
@@ -256,8 +275,8 @@ unique_properties <- unique(soils_modeled_10cm$properties)
 soils_modeled_10cm[unique_properties[4]==soils_modeled_10cm$properties,]
 
 soils_modeled_10cm_revised <- soils_modeled_10cm[match(unique_properties, soils_modeled_10cm$properties), ]
-dim(soils_modeled_10cm_revised) #3144 compared to 3107 in 0-30 cm based summary
-table(soils_modeled_10cm_revised$textural_class)
+dim(soils_modeled_10cm_revised)
+table(soils_modeled_10cm_revised$textural_class[!is.na(soils_modeled_10cm_revised$result_opt2)])
 lapply(textural_classes, function(x) summary(soils_modeled_10cm_revised$result_opt2[soils_modeled_10cm_revised$textural_class==x]))
 lapply(textural_classes, function(x) summary(soils_modeled_10cm$result_opt2[soils_modeled_10cm$textural_class==x]))
 lapply(textural_classes, function(x) summary(soils_modeled_10cm$result_opt2[soils_modeled_10cm$textural_class==x])[3] - summary(soils_modeled_10cm_revised$result_opt2[soils_modeled_10cm_revised$textural_class==x])[3]) #only silty clay stats are changed appreciably
@@ -266,6 +285,46 @@ lapply(textural_classes, function(x) summary(soils_modeled_10cm_revised$result_o
 
 #limit to unique
 soils_modeled_10cm <- soils_modeled_10cm_revised
+
+#look at water balance issues by textural class
+summary(soils_modeled_10cm$sat_pct_pf)
+sum(soils_modeled_10cm$sat_pct_pf < 99, na.rm = TRUE) #672 less than 99% saturated
+sum(soils_modeled_10cm$sat_pct_pf < 98, na.rm = TRUE) #550 less than 98% saturated
+sum(soils_modeled_10cm$sat_pct_pf < 95, na.rm = TRUE) #399 less than 98% saturated
+sum(soils_modeled_10cm$sat_pct_pf < 90, na.rm = TRUE) #235 less than 90% saturated
+tapply(soils_modeled_10cm$sat_pct_pf[!is.na(soils_modeled_10cm$result_opt2)], soils_modeled_10cm$textural_class[!is.na(soils_modeled_10cm$result_opt2)], summary)
+tapply(soils_modeled_10cm$sat_pct_pf[!is.na(soils_modeled_10cm$result_opt2)], soils_modeled_10cm$textural_class[!is.na(soils_modeled_10cm$result_opt2)], function(x) sum(x < 95, na.rm = TRUE))
+tapply(soils_modeled_10cm$sat_pct_pf[!is.na(soils_modeled_10cm$result_opt2)], soils_modeled_10cm$textural_class[!is.na(soils_modeled_10cm$result_opt2)], function(x) sum(x < 90, na.rm = TRUE))
+tapply(soils_modeled_10cm$result_opt2[!is.na(soils_modeled_10cm$result_opt2)], soils_modeled_10cm$textural_class[!is.na(soils_modeled_10cm$result_opt2)], function(x) median(x))
+tapply(soils_modeled_10cm$result_opt2[!is.na(soils_modeled_10cm$result_opt2)], soils_modeled_10cm$textural_class[!is.na(soils_modeled_10cm$result_opt2)], function(x) median(x))
+tapply(soils_modeled_10cm$result_opt2[!is.na(soils_modeled_10cm$result_opt2)], soils_modeled_10cm$textural_class[!is.na(soils_modeled_10cm$result_opt2)], function(x) sd(x))
+tapply(soils_modeled_10cm$result_opt2[!is.na(soils_modeled_10cm$result_opt2)], soils_modeled_10cm$textural_class[!is.na(soils_modeled_10cm$result_opt2)], function(x) median(x))
+tapply(soils_modeled_10cm$result_opt2[!is.na(soils_modeled_10cm$result_opt2)], soils_modeled_10cm$textural_class[!is.na(soils_modeled_10cm$result_opt2)], function(x) sd(x))
+
+soils_modeled_10cm[soils_modeled_10cm$cokey==20199,]
+tapply(soils_modeled_10cm$wb_rel_pct[!is.na(soils_modeled_10cm$result_opt2)], soils_modeled_10cm$textural_class[!is.na(soils_modeled_10cm$result_opt2)], summary)
+tapply(soils_modeled_10cm$wb_rel_pct[!is.na(soils_modeled_10cm$result_opt2)], soils_modeled_10cm$textural_class[!is.na(soils_modeled_10cm$result_opt2)], function(x) sum(x > 5, na.rm=TRUE))
+tapply(soils_modeled_10cm$wb_rel_pct[!is.na(soils_modeled_10cm$result_opt2)], soils_modeled_10cm$textural_class[!is.na(soils_modeled_10cm$result_opt2)], function(x) sum(x > 3, na.rm=TRUE))
+tapply(soils_modeled_10cm$wb_PF_cm[!is.na(soils_modeled_10cm$result_opt2)], soils_modeled_10cm$textural_class[!is.na(soils_modeled_10cm$result_opt2)], function(x) sum(x > 0.5, na.rm=TRUE))
+tapply(soils_modeled_10cm$wb_PF_cm[!is.na(soils_modeled_10cm$result_opt2)], soils_modeled_10cm$textural_class[!is.na(soils_modeled_10cm$result_opt2)], function(x) sum(x > 0.25, na.rm=TRUE)) #10
+
+tapply(soils_modeled_10cm$result_opt2[which(soils_modeled_10cm$sat_pct_pf >=90 & soils_modeled_10cm$wb_PF_cm < 0.25)], soils_modeled_10cm$textural_class[which(soils_modeled_10cm$sat_pct_pf >=90 & soils_modeled_10cm$wb_PF_cm < 0.25)], function(x) median(x, na.rm = TRUE))
+tapply(soils_modeled_10cm$result_opt2[which(soils_modeled_10cm$sat_pct_pf >=90 & soils_modeled_10cm$wb_PF_cm < 0.25)], soils_modeled_10cm$textural_class[which(soils_modeled_10cm$sat_pct_pf >=90 & soils_modeled_10cm$wb_PF_cm < 0.25)], function(x) sd(x, na.rm = TRUE))
+table(soils_modeled_10cm$textural_class[which(soils_modeled_10cm$sat_pct_pf >=90 & soils_modeled_10cm$wb_PF_cm < 0.25 & !is.na(soils_modeled_10cm$result_opt2))])
+
+tapply(soils_modeled_10cm$result_opt2[which(soils_modeled_10cm$sat_pct_pf >=80 & soils_modeled_10cm$wb_PF_cm < 0.25 & soils_modeled_10cm$wb_rel_pct <= 3)], soils_modeled_10cm$textural_class[which(soils_modeled_10cm$sat_pct_pf >=80 & soils_modeled_10cm$wb_PF_cm < 0.25 & soils_modeled_10cm$wb_rel_pct <= 3)], function(x) median(x, na.rm = TRUE))
+tapply(soils_modeled_10cm$result_opt2[which(soils_modeled_10cm$sat_pct_pf >=80 & soils_modeled_10cm$wb_PF_cm < 0.25 & soils_modeled_10cm$wb_rel_pct <= 3)], soils_modeled_10cm$textural_class[which(soils_modeled_10cm$sat_pct_pf >=80 & soils_modeled_10cm$wb_PF_cm < 0.25 & soils_modeled_10cm$wb_rel_pct <= 3)], function(x) sd(x, na.rm = TRUE))
+tapply(soils_modeled_10cm$result_opt2[which(soils_modeled_10cm$sat_pct_pf >=80 & soils_modeled_10cm$wb_PF_cm < 0.25 & soils_modeled_10cm$wb_rel_pct <= 3)], soils_modeled_10cm$textural_class[which(soils_modeled_10cm$sat_pct_pf >=80 & soils_modeled_10cm$wb_PF_cm < 0.25 & soils_modeled_10cm$wb_rel_pct <= 3)], function(x) max(x, na.rm = TRUE))
+tapply(soils_modeled_10cm$result_opt2[which(soils_modeled_10cm$sat_pct_pf >=80 & soils_modeled_10cm$wb_PF_cm < 0.25 & soils_modeled_10cm$wb_rel_pct <= 3)], soils_modeled_10cm$textural_class[which(soils_modeled_10cm$sat_pct_pf >=80 & soils_modeled_10cm$wb_PF_cm < 0.25 & soils_modeled_10cm$wb_rel_pct <= 3)], function(x) min(x, na.rm = TRUE))
+table(soils_modeled_10cm$textural_class[which(soils_modeled_10cm$sat_pct_pf >=80 & soils_modeled_10cm$wb_PF_cm < 0.25 & soils_modeled_10cm$wb_rel_pct <= 3 & !is.na(soils_modeled_10cm$result_opt2))])
+table(soils_modeled_10cm$textural_class[which(soils_modeled_10cm$sat_pct_pf >=80 & soils_modeled_10cm$wb_PF_cm < 0.25 & soils_modeled_10cm$wb_rel_pct <= 3 & !is.na(soils_modeled_10cm$result_opt2) & soils_modeled_10cm$h_fc_10cm < -600)])
+
+lapply(textural_classes, function(x) hist(soils_modeled_10cm$result_opt2[which(soils_modeled_10cm$sat_pct_pf >=80 & soils_modeled_10cm$wb_PF_cm < 0.25 & soils_modeled_10cm$wb_rel_pct <= 3 & soils_modeled_10cm$textural_class==x)], main = x))
+
+#look at extremes by texture
+x <- 'sandy loam'
+crit_val <- 20
+soils_modeled_10cm[which(soils_modeled_10cm$sat_pct_pf >=80 & soils_modeled_10cm$wb_PF_cm < 0.25 & soils_modeled_10cm$wb_rel_pct <= 3 & soils_modeled_10cm$textural_class==x & soils_modeled_10cm$result_opt2 > crit_val),]
 
 #get cokeys for clay soils with no results
 soils_modeled_10cm[soils_modeled_10cm$textural_class=='clay' & is.na(soils_modeled_10cm$result_opt1),]
