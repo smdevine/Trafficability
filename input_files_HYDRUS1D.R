@@ -295,9 +295,9 @@ write_profile(depths=soil_data[[1]]$depths, soil = soil_data[[1]]$soil, mat_numb
 #create directory of input data for all soil names that aren't cemented
 #faulty data: soil_2676
 for(i in 1:length(soil_data)) {
-  write_atmos(modelDir = modelDir, flood_date = '2005-03-15', flood_duration = 4, soil_name = names(soil_data)[i], PET = ETo_cells_of_interest, CIMIS='cell_5248') #PET will be modified in future runs
-  write_selector(mat_number = soil_data[[i]]$mat_number, flood_duration = 4, modelDir = modelDir, VGs = soil_data[[i]]$VGs, soil_name = names(soil_data)[i], MaxIT = 30, CIMIS = 'cell_5248', flood_date = '2005-03-15')
-  write_profile(depths=soil_data[[i]]$depths, soil = soil_data[[i]]$soil, mat_number = soil_data[[i]]$mat_number, modelDir = modelDir, soil_name = names(soil_data)[i], CIMIS = 'cell_5248', flood_date = '2005-03-15')
+  write_atmos(modelDir = modelDir, flood_date = '2005-01-15', flood_duration = 4, soil_name = names(soil_data)[i], PET = ETo_cells_of_interest, CIMIS='cell_5248') #PET will be modified in future runs
+  write_selector(mat_number = soil_data[[i]]$mat_number, flood_duration = 4, modelDir = modelDir, VGs = soil_data[[i]]$VGs, soil_name = names(soil_data)[i], MaxIT = 30, CIMIS = 'cell_5248', flood_date = '2005-01-15')
+  write_profile(depths=soil_data[[i]]$depths, soil = soil_data[[i]]$soil, mat_number = soil_data[[i]]$mat_number, modelDir = modelDir, soil_name = names(soil_data)[i], CIMIS = 'cell_5248', flood_date = '2005-01-15')
 }
 
 #write file paths and run.bat file
@@ -305,7 +305,7 @@ for(i in 1:length(soil_data)) {
 #copy path1 level_01.dir
 #H1D_CALC
 paths_shortcut <- paste0('path', 1:length(soil_data))
-sub_Dir <-  paste0('cell_5248', '_', '2005-03-15')
+sub_Dir <-  paste0('cell_5248', '_', '2005-01-15')
 runbat <- file(file.path(modelDir, sub_Dir, 'run.bat.txt'), 'w')
 for (i in seq_along(paths_shortcut)) {
   writeLines(paste('copy', paths_shortcut[i], 'level_01.dir'), con = runbat)
