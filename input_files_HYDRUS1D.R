@@ -1,50 +1,59 @@
-library(aqp)
+# library(aqp)
 options(max.print = 10000)
 options(width=130)
 
-workDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/data from Stathis'
-templateDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/Oct2020test/Template/Template'
-modelDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/climate_runs'
-climateDir <- 'C:/Users/smdevine/Desktop/Allowable_Depletion/model_scaffold/run_model/Mar2018'
-prelimDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/Oct2020test/tables/reduce_soils'
-list.files(templateDir)
+laptop <- FALSE
+if (laptop) {
+  workDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/data from Stathis'
+  templateDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/Oct2020test/Template/Template'
+  modelDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/climate_runs'
+  climateDir <- 'C:/Users/smdevine/Desktop/Allowable_Depletion/model_scaffold/run_model/Mar2018'
+  prelimDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/Oct2020test/tables/reduce_soils'
+} else {
+  workDir <- 'C:/Users/smdevine/Desktop/PostDoc/trafficability/data from Stathis'
+  templateDir <- 'D:/PostDoc/Trafficability/Oct2020test/Template/Template'
+  modelDir <- 'D:/PostDoc/Trafficability/climate_runs'
+  climateDir <- 'D:/PostDoc/Trafficability/climate_runs/CIMIS_cell_selection'
+  prelimDir <- 'C:/Users/smdevine/Desktop/PostDoc/trafficability/soils_of_interest'
+}
 
 #set flood date and duration
 # flood_date <- '2005-03-15'
 # flood_duration <- 4
 
 #create PET vector for testing general soil differences in trafficability
-ETo <- read.csv(file.path(climateDir, 'SpatialCIMIS.ETo.QCpass.csv'), stringsAsFactors = FALSE)
-head(ETo$dates)
-tail(ETo$dates)
-unique(ETo$year)
-ETo <- ETo[ETo$year %in% 2004:2017,]
-dim(ETo)
-ETo_annual <- aggregate(ETo[,6:ncol(ETo)], by=list(year=ETo$year), FUN = sum)
-dim(ETo_annual)
-ETo_annual$cell_3091
-ETo_annual_means <- apply(ETo_annual[,2:ncol(ETo_annual)], 1, mean)
-names(ETo_annual_means) <- 2004:2017
-ETo_annual_means[order(ETo_annual_means)]
-median(ETo_annual_means) #either 2012 or 2016
-mean(ETo_annual_means) #1393.3, closest to 2009
-#2005=low ET, 2009=avg. ET, 2015=high ET
-
-quantiles_find <- quantile(ETo_annual[ETo_annual$year==2009,], probs = seq(from=5, to=95, by=5)/100)
-length((quantiles_find))
-
-ETo_annual_ranked <- as.data.frame(t(ETo_annual[,2:ncol(ETo_annual)]))
-colnames(ETo_annual_ranked) <- paste0('yr_', 2004:2017)
-ETo_annual_ranked <- ETo_annual_ranked[order(ETo_annual_ranked$yr_2009),]
-dim(ETo_annual_ranked)
-rows_to_select <- round(c(0.05, seq(from=0.1, to=0.9, by=0.1), 0.95)*13060, digits = 0)
-rows_to_select
-ETo_annual_ranked_selection <- ETo_annual_ranked[rows_to_select,]
-CIMIS_cells <- rownames(ETo_annual_ranked_selection)
-which(rownames(ETo_annual_ranked)=='cell_170036')/nrow(ETo_annual_ranked) #10876
-rows_to_select/nrow(ETo_annual_ranked)
-ETo_cells_of_interest <- ETo[,c(1:5, which(colnames(ETo) %in% CIMIS_cells))]
-write.csv(ETo_cells_of_interest[ETo_cells_of_interest$year %in% 2004:2017,], file.path(modelDir, 'CIMIS_cell_selection', 'ETo_cells_of_interest.csv'), row.names=FALSE)
+# ETo <- read.csv(file.path(climateDir, 'SpatialCIMIS.ETo.QCpass.csv'), stringsAsFactors = FALSE)
+# head(ETo$dates)
+# tail(ETo$dates)
+# unique(ETo$year)
+# ETo <- ETo[ETo$year %in% 2004:2017,]
+# dim(ETo)
+# ETo_annual <- aggregate(ETo[,6:ncol(ETo)], by=list(year=ETo$year), FUN = sum)
+# dim(ETo_annual)
+# ETo_annual$cell_3091
+# ETo_annual_means <- apply(ETo_annual[,2:ncol(ETo_annual)], 1, mean)
+# names(ETo_annual_means) <- 2004:2017
+# ETo_annual_means[order(ETo_annual_means)]
+# median(ETo_annual_means) #either 2012 or 2016
+# mean(ETo_annual_means) #1393.3, closest to 2009
+# #2005=low ET, 2009=avg. ET, 2015=high ET
+# 
+# quantiles_find <- quantile(ETo_annual[ETo_annual$year==2009,], probs = seq(from=5, to=95, by=5)/100)
+# length((quantiles_find))
+# 
+# ETo_annual_ranked <- as.data.frame(t(ETo_annual[,2:ncol(ETo_annual)]))
+# colnames(ETo_annual_ranked) <- paste0('yr_', 2004:2017)
+# ETo_annual_ranked <- ETo_annual_ranked[order(ETo_annual_ranked$yr_2009),]
+# dim(ETo_annual_ranked)
+# rows_to_select <- round(c(0.05, seq(from=0.1, to=0.9, by=0.1), 0.95)*13060, digits = 0)
+# rows_to_select
+# ETo_annual_ranked_selection <- ETo_annual_ranked[rows_to_select,]
+# CIMIS_cells <- rownames(ETo_annual_ranked_selection)
+# which(rownames(ETo_annual_ranked)=='cell_170036')/nrow(ETo_annual_ranked) #10876
+# rows_to_select/nrow(ETo_annual_ranked)
+# ETo_cells_of_interest <- ETo[,c(1:5, which(colnames(ETo) %in% CIMIS_cells))]
+# write.csv(ETo_cells_of_interest[ETo_cells_of_interest$year %in% 2004:2017,], file.path(modelDir, 'CIMIS_cell_selection', 'ETo_cells_of_interest.csv'), row.names=FALSE)
+ETo_cells_of_interest <- read.csv(file.path(climateDir, 'ETo_cells_of_interest.csv'), stringsAsFactors = FALSE)
 
 # tapply(ETo$cell_170036, ETo$year, sum)
 # Panoche_ETo_170036 <- ETo[, c('dates', 'cell_170036')]
@@ -187,8 +196,8 @@ write_atmos <- function(modelDir, flood_date, flood_duration, soil_name, PET, cl
 # write_atmos(modelDir = modelDir, flood_date = "2005-03-15", flood_duration = 4, soil_name='Hanford', PET = Panoche_ETo_2005)
 # write_atmos(modelDir = modelDir, flood_date = "2005-03-15", flood_duration = 4, soil_name='Panoche_4', PET = Panoche_ETo_2005)  
 # write_atmos(modelDir = modelDir, flood_date = "2005-03-15", flood_duration = 4, soil_name=names(soil_data)[1], PET = Panoche_ETo_2005)
-write_atmos(modelDir = modelDir, flood_date = '2005-03-15', flood_duration = 4, soil_name = names(soil_data)[1], PET = ETo_cells_of_interest, CIMIS='cell_5248')
-write_atmos(modelDir = modelDir, flood_date = '2015-03-15', flood_duration = 4, soil_name = names(soil_data)[1], PET = ETo_cells_of_interest, CIMIS='cell_5248')
+# write_atmos(modelDir = modelDir, flood_date = '2005-03-15', flood_duration = 4, soil_name = names(soil_data)[1], PET = ETo_cells_of_interest, CIMIS='cell_5248')
+# write_atmos(modelDir = modelDir, flood_date = '2015-03-15', flood_duration = 4, soil_name = names(soil_data)[1], PET = ETo_cells_of_interest, CIMIS='cell_5248')
 
 #SELECTOR.IN file creation
 #print_start was 4
@@ -231,8 +240,8 @@ write_selector <- function(mat_number, flood_duration, modelDir, VGs, soil_name,
 # write_selector(mat_number = panoche$mat_number, flood_duration = 4, modelDir = modelDir, VGs = panoche$VGs, soil_name = 'Panoche_4', MaxIT = 30)
 # write_selector(mat_number = hanford$mat_number, flood_duration = 4, modelDir = modelDir, VGs = hanford$VGs, soil_name = 'Hanford', MaxIT = 30)
 # write_selector(mat_number = soil_data[[1]]$mat_number, flood_duration = 4, modelDir = modelDir, VGs = soil_data[[1]]$VGs, soil_name = names(soil_data)[1], MaxIT = 30)
-write_selector(mat_number = soil_data[[1]]$mat_number, flood_duration = 4, modelDir = modelDir, VGs = soil_data[[1]]$VGs, soil_name = names(soil_data)[1], MaxIT = 30, CIMIS = 'cell_5248', flood_date = '2005-03-15')
-write_selector(mat_number = soil_data[[1]]$mat_number, flood_duration = 4, modelDir = modelDir, VGs = soil_data[[1]]$VGs, soil_name = names(soil_data)[1], MaxIT = 30, CIMIS = 'cell_5248', flood_date = '2005-03-15')
+# write_selector(mat_number = soil_data[[1]]$mat_number, flood_duration = 4, modelDir = modelDir, VGs = soil_data[[1]]$VGs, soil_name = names(soil_data)[1], MaxIT = 30, CIMIS = 'cell_5248', flood_date = '2005-03-15')
+# write_selector(mat_number = soil_data[[1]]$mat_number, flood_duration = 4, modelDir = modelDir, VGs = soil_data[[1]]$VGs, soil_name = names(soil_data)[1], MaxIT = 30, CIMIS = 'cell_5248', flood_date = '2005-03-15')
 
 #now modify profile.dat
 format_profile <-  function(x) {
@@ -289,15 +298,18 @@ write_profile <- function(depths, soil, mat_number, modelDir, soil_name, CIMIS, 
 # write_profile(depths=hanford$depths, soil = hanford$soil, mat_number = hanford$mat_number, modelDir = modelDir, soil_name = 'Hanford')
 # write_profile(depths=panoche$depths, soil = panoche$soil, mat_number = panoche$mat_number, modelDir = modelDir, soil_name = 'Panoche_4')
 # write_profile(depths=soil_data[[1]]$depths, soil = soil_data[[1]]$soil, mat_number = soil_data[[1]]$mat_number, modelDir = modelDir, soil_name = names(soil_data)[1])
-write_profile(depths=soil_data[[1]]$depths, soil = soil_data[[1]]$soil, mat_number = soil_data[[1]]$mat_number, modelDir = modelDir, soil_name = names(soil_data)[1], CIMIS = 'cell_5248', flood_date = '2005-03-15')
-write_profile(depths=soil_data[[1]]$depths, soil = soil_data[[1]]$soil, mat_number = soil_data[[1]]$mat_number, modelDir = modelDir, soil_name = names(soil_data)[1], CIMIS = 'cell_5248', flood_date = '2015-03-15')
+# write_profile(depths=soil_data[[1]]$depths, soil = soil_data[[1]]$soil, mat_number = soil_data[[1]]$mat_number, modelDir = modelDir, soil_name = names(soil_data)[1], CIMIS = 'cell_5248', flood_date = '2005-03-15')
+# write_profile(depths=soil_data[[1]]$depths, soil = soil_data[[1]]$soil, mat_number = soil_data[[1]]$mat_number, modelDir = modelDir, soil_name = names(soil_data)[1], CIMIS = 'cell_5248', flood_date = '2015-03-15')
 
 #create directory of input data for all soil names that aren't cemented
 #faulty data: soil_2676
+colnames(ETo_cells_of_interest)
+cellname <- 'cell_18033'
+date_of_interest <- '2005-03-15'
 for(i in 1:length(soil_data)) {
-  write_atmos(modelDir = modelDir, flood_date = '2005-01-15', flood_duration = 4, soil_name = names(soil_data)[i], PET = ETo_cells_of_interest, CIMIS='cell_5248') #PET will be modified in future runs
-  write_selector(mat_number = soil_data[[i]]$mat_number, flood_duration = 4, modelDir = modelDir, VGs = soil_data[[i]]$VGs, soil_name = names(soil_data)[i], MaxIT = 30, CIMIS = 'cell_5248', flood_date = '2005-01-15')
-  write_profile(depths=soil_data[[i]]$depths, soil = soil_data[[i]]$soil, mat_number = soil_data[[i]]$mat_number, modelDir = modelDir, soil_name = names(soil_data)[i], CIMIS = 'cell_5248', flood_date = '2005-01-15')
+  write_atmos(modelDir = modelDir, flood_date = date_of_interest, flood_duration = 4, soil_name = names(soil_data)[i], PET = ETo_cells_of_interest, CIMIS=cellname)
+  write_selector(mat_number = soil_data[[i]]$mat_number, flood_duration = 4, modelDir = modelDir, VGs = soil_data[[i]]$VGs, soil_name = names(soil_data)[i], MaxIT = 30, CIMIS = cellname, flood_date = date_of_interest)
+  write_profile(depths=soil_data[[i]]$depths, soil = soil_data[[i]]$soil, mat_number = soil_data[[i]]$mat_number, modelDir = modelDir, soil_name = names(soil_data)[i], CIMIS = cellname, flood_date = date_of_interest)
 }
 
 #write file paths and run.bat file
@@ -305,7 +317,7 @@ for(i in 1:length(soil_data)) {
 #copy path1 level_01.dir
 #H1D_CALC
 paths_shortcut <- paste0('path', 1:length(soil_data))
-sub_Dir <-  paste0('cell_5248', '_', '2005-01-15')
+sub_Dir <-  paste0(cellname, '_', date_of_interest)
 runbat <- file(file.path(modelDir, sub_Dir, 'run.bat.txt'), 'w')
 for (i in seq_along(paths_shortcut)) {
   writeLines(paste('copy', paths_shortcut[i], 'level_01.dir'), con = runbat)
@@ -315,10 +327,10 @@ close(runbat)
 
 if(!dir.exists(file.path(modelDir, sub_Dir, 'paths'))) {
     dir.create(file.path(modelDir, sub_Dir, 'paths'))
-  }
+}
 
 for (i in seq_along(paths_shortcut)) {
   filepth <- file(file.path(modelDir, sub_Dir, 'paths', paths_shortcut[i]), 'w')
-  writeLines(file.path('D:\PostDoc\Trafficability\climate_runs', sub_Dir, names(soil_data)[i], names(soil_data)[i], fsep='\\'), con = filepth)
+  writeLines(file.path('D:/PostDoc/Trafficability/climate_runs', sub_Dir, names(soil_data)[i], names(soil_data)[i], fsep='/'), con = filepth)
   close(filepth)
 }
