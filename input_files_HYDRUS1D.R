@@ -1,7 +1,8 @@
 # library(aqp)
-options(max.print = 10000)
+options(max.print = 15000)
 options(width=130)
-
+options()$max.print
+options()$width
 laptop <- FALSE
 if (laptop) {
   workDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/data from Stathis'
@@ -302,35 +303,31 @@ write_profile <- function(depths, soil, mat_number, modelDir, soil_name, CIMIS, 
 # write_profile(depths=soil_data[[1]]$depths, soil = soil_data[[1]]$soil, mat_number = soil_data[[1]]$mat_number, modelDir = modelDir, soil_name = names(soil_data)[1], CIMIS = 'cell_5248', flood_date = '2015-03-15')
 
 #create directory of input data for all soil names that aren't cemented
-#faulty data: soil_2676
-colnames(ETo_cells_of_interest)
-cellname <- 'cell_18033'
-date_of_interest <- '2005-03-15'
-for(i in 1:length(soil_data)) {
-  write_atmos(modelDir = modelDir, flood_date = date_of_interest, flood_duration = 4, soil_name = names(soil_data)[i], PET = ETo_cells_of_interest, CIMIS=cellname)
-  write_selector(mat_number = soil_data[[i]]$mat_number, flood_duration = 4, modelDir = modelDir, VGs = soil_data[[i]]$VGs, soil_name = names(soil_data)[i], MaxIT = 30, CIMIS = cellname, flood_date = date_of_interest)
-  write_profile(depths=soil_data[[i]]$depths, soil = soil_data[[i]]$soil, mat_number = soil_data[[i]]$mat_number, modelDir = modelDir, soil_name = names(soil_data)[i], CIMIS = cellname, flood_date = date_of_interest)
-}
-
-#write file paths and run.bat file
-#5509 soils to model
-#copy path1 level_01.dir
-#H1D_CALC
-paths_shortcut <- paste0('path', 1:length(soil_data))
-sub_Dir <-  paste0(cellname, '_', date_of_interest)
-runbat <- file(file.path(modelDir, sub_Dir, 'run.bat.txt'), 'w')
-for (i in seq_along(paths_shortcut)) {
-  writeLines(paste('copy', paths_shortcut[i], 'level_01.dir'), con = runbat)
-  writeLines('H1D_CALC', con = runbat)
-}
-close(runbat)
-
-if(!dir.exists(file.path(modelDir, sub_Dir, 'paths'))) {
+cellnames <- colnames(ETo_cells_of_interest)[6:ncol(ETo_cells_of_interest)]
+date_of_interest <- '2005-01-15'
+for (j in 1:length(cellnames)) {
+  for(i in 1:length(soil_data)) {
+    write_atmos(modelDir = modelDir, flood_date = date_of_interest, flood_duration = 4, soil_name = names(soil_data)[i], PET = ETo_cells_of_interest, CIMIS=cellnames[j])
+    write_selector(mat_number = soil_data[[i]]$mat_number, flood_duration = 4, modelDir = modelDir, VGs = soil_data[[i]]$VGs, soil_name = names(soil_data)[i], MaxIT = 30, CIMIS = cellnames[j], flood_date = date_of_interest)
+    write_profile(depths=soil_data[[i]]$depths, soil = soil_data[[i]]$soil, mat_number = soil_data[[i]]$mat_number, modelDir = modelDir, soil_name = names(soil_data)[i], CIMIS = cellnames[j], flood_date = date_of_interest)
+  }
+  #write file paths and run.bat file
+  paths_shortcut <- paste0('path', 1:length(soil_data))
+  sub_Dir <-  paste0(cellnames[j], '_', date_of_interest)
+  if(!dir.exists(file.path(modelDir, sub_Dir, 'paths'))) {
     dir.create(file.path(modelDir, sub_Dir, 'paths'))
-}
-
-for (i in seq_along(paths_shortcut)) {
-  filepth <- file(file.path(modelDir, sub_Dir, 'paths', paths_shortcut[i]), 'w')
-  writeLines(file.path('D:/PostDoc/Trafficability/climate_runs', sub_Dir, names(soil_data)[i], names(soil_data)[i], fsep='/'), con = filepth)
-  close(filepth)
+  }
+  file.copy(from='D:/PostDoc/Trafficability/climate_runs/2005-03-15/cell_174576_2005-03-15/paths/H1D_CALC.EXE', to=file.path(modelDir, sub_Dir, 'paths', 'H1D_CALC.EXE'))
+  runbat <- file(file.path(modelDir, sub_Dir, 'paths', 'run.bat'), 'w')
+  for (i in seq_along(paths_shortcut)) {
+    writeLines(paste('copy', paths_shortcut[i], 'level_01.dir'), con = runbat)
+    writeLines('H1D_CALC', con = runbat)
+  }
+  close(runbat)
+  for (i in seq_along(paths_shortcut)) {
+    filepth <- file(file.path(modelDir, sub_Dir, 'paths', paths_shortcut[i]), 'w')
+    writeLines(file.path('D:/PostDoc/Trafficability/climate_runs', sub_Dir, names(soil_data)[i], names(soil_data)[i], fsep='/'), con = filepth)
+    close(filepth)
+  }
+  print(options()$width)
 }
