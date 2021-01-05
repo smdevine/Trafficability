@@ -12,7 +12,7 @@ if (laptop) {
   prelimDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/Oct2020test/tables/reduce_soils'
 } else {
   workDir <- 'C:/Users/smdevine/Desktop/PostDoc/trafficability/data from Stathis'
-  templateDir <- 'D:/PostDoc/Trafficability/Oct2020test/Template/Template'
+  templateDir <- 'D:/PostDoc/Trafficability/climate_runs/Template/Template'
   modelDir <- 'D:/PostDoc/Trafficability/climate_runs'
   climateDir <- 'D:/PostDoc/Trafficability/climate_runs/CIMIS_cell_selection'
   prelimDir <- 'C:/Users/smdevine/Desktop/PostDoc/trafficability/soils_of_interest'
@@ -304,8 +304,19 @@ write_profile <- function(depths, soil, mat_number, modelDir, soil_name, CIMIS, 
 
 #create directory of input data for all soil names that aren't cemented
 cellnames <- colnames(ETo_cells_of_interest)[6:ncol(ETo_cells_of_interest)]
-date_of_interest <- '2005-01-15'
+cellnames
+date_of_interest <- '2005-04-15'
+
+#error file to select
+# error_soils <- read.csv(file.path(modelDir, 'errors', 'H1D_errors_cell_168006_2005-01-15.csv'), stringsAsFactors = FALSE)
+# length(error_soils$soilnames)
+# soil_data <- soil_data[names(soil_data) %in% error_soils$soilnames]
+# length(soil_data)
+# cellnames[7]
+# j <- 7
 for (j in 1:length(cellnames)) {
+  options(max.print = 15000)
+  options(width=130)
   for(i in 1:length(soil_data)) {
     write_atmos(modelDir = modelDir, flood_date = date_of_interest, flood_duration = 4, soil_name = names(soil_data)[i], PET = ETo_cells_of_interest, CIMIS=cellnames[j])
     write_selector(mat_number = soil_data[[i]]$mat_number, flood_duration = 4, modelDir = modelDir, VGs = soil_data[[i]]$VGs, soil_name = names(soil_data)[i], MaxIT = 30, CIMIS = cellnames[j], flood_date = date_of_interest)
