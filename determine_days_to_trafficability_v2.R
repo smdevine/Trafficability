@@ -26,9 +26,7 @@ determine_trafficability_v2 <- function(f_path, resultsDir, flood_duration, remo
   results <- matrix(data=days_to_traff_0_10cm, nrow = length(days_to_traff_0_10cm), ncol = 1, byrow = TRUE, dimnames = list(paste0('FC_', seq(0.95, 0.7, -0.01)), c('days_to_traff_0_10cm')))
   write.csv(results, file = file.path(summaryDir, paste0(f_path, '_results.csv')), row.names=TRUE)
 }
-dirnames <- list.dirs('D:/PostDoc/Trafficability/climate_runs', full.names = FALSE, recursive = FALSE)
-dirnames <- dirnames[grepl(glob2rx('cell*2005-02-15'), dirnames)]
-dirnames
+
 # subDir <- dirnames #143 GB before cleaning; 4.3 GB after)
 condense_results <- function(folder) {
   subDir <- folder
@@ -75,11 +73,65 @@ condense_results <- function(folder) {
   sapply(path_names, determine_trafficability_v2, resultsDir=resultsDir, flood_duration=4, removeFiles=TRUE, subDir=subDir, print_f_path=FALSE, summaryDir=summaryDir)
   print(paste(subDir, 'has been completed.'))
 }
+
+condense_results_error_runs <- function(folder) {
+  subDir <- folder
+  print(subDir)
+  if (laptop) {
+    resultsDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/HYDRUS_runs'
+    summaryDir <- file.path(resultsDir, 'summary')
+    summaryDir2 <- file.path(resultsDir, 'summary')} else {
+      resultsDir <- 'D:/PostDoc/Trafficability/climate_runs'
+      summaryDir <- file.path(resultsDir, subDir, 'summary')
+    }
+  path_names <- list.dirs(file.path(resultsDir, subDir), full.names = FALSE, recursive = FALSE)
+  # head(path_names)
+  # tail(path_names)
+  path_names <- path_names[2:length(path_names)]
+  # if(length(path_names)!=2911){
+  #   stop(print('Incorrect number of directories to parse!'))
+  # }
+  error_runs <- sapply(path_names, function(x) file.exists(file.path(resultsDir, subDir, x, x, 'Error.msg')))
+  print(paste('There are', sum(error_runs), 'with error messages.'))
+  # error_runs <- rep(TRUE, length(path_names))
+  #if error with atmos.in
+  # for (i in seq_along(error_runs)) {
+  #   test <- readLines(file.path(resultsDir, subDir, path_names[i], path_names[i], 'Error.msg'), n=1, skipNul = TRUE)
+  #   if(test == " Error when reading from an input file Atmosph.in !                             ") {
+  #     error_runs[i] <- FALSE
+  #   }
+  # }
+  # 
+  # sum(error_runs) #4
+  error_names <- path_names[error_runs]
+  path_names <- path_names[!error_runs]
+  #write soil names with error.msgs to file
+  if(sum(error_runs) > 0) {
+    write.csv(data.frame(soilnames=error_names), file.path(resultsDir, 'errors_take2', paste0('H1D_errors_', subDir, '.csv')), row.names = FALSE)
+  }
+  if(!dir.exists(file.path(resultsDir, subDir, 'summary'))) {
+    dir.create(file.path(resultsDir, subDir, 'summary'))
+  }
+  # if(!dir.exists(file.path(resultsDir, 'errors'))) {
+  #   dir.create(file.path(resultsDir, 'errors'))
+  # }
+  #loop through directories applying function to condense results
+  sapply(path_names, determine_trafficability_v2, resultsDir=resultsDir, flood_duration=4, removeFiles=TRUE, subDir=subDir, print_f_path=FALSE, summaryDir=summaryDir)
+  print(paste(subDir, 'has been completed.'))
+}
+
+dirnames <- list.dirs('D:/PostDoc/Trafficability/climate_runs', full.names = FALSE, recursive = FALSE)
+dirnames <- dirnames[grepl(glob2rx('cell*'), dirnames)]
+dirnames
+
 condense_results(folder = dirnames[1])
 condense_results(folder = dirnames[2])
 condense_results(folder = dirnames[3])
 condense_results(folder = dirnames[4])
 condense_results(folder = dirnames[5])
 condense_results(folder = dirnames[6])
+
+for (i in seq_along(dirnames)){condense_results_error_runs(folder=dirnames[i])}
+
 which(path_names=='soil_10789752')
 # determine_trafficability_v2(f_path = 'Panoche_plants', resultsDir = resultsDir, flood_duration = 4)
