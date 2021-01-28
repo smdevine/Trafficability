@@ -36,16 +36,18 @@ CIMIS_cells
 write.csv(data.frame(CIMIS=CIMIS_cells, percentiles=c(0.05, seq(from=0.1, to=0.9, by=0.1), 0.95)), file.path(resultsDir, 'CIMIS_cells_percentiles.csv'), row.names=FALSE)
 cellnumbers_of_interest <- as.integer(gsub('cell_', '', CIMIS_cells))
 cellnumbers_of_interest_sp <- xyFromCell(ETo_raster, cell = cellnumbers_of_interest, spatial=TRUE)
+cellnumbers_of_interest_sp$cellnumber <- cellnumbers_of_interest
 plot(ETo_raster)
 plot(cellnumbers_of_interest_sp, add=TRUE)
 text(cellnumbers_of_interest_sp,  labels=cellnumbers_of_interest, cex=0.9, pos=1)
-
+shapefile(cellnumbers_of_interest_sp, file.path(resultsDir, 'cellnumbers_of_interest.shp'), overwrite=TRUE)
 #make summary by years (2005, 2009, and 2015) and months (Jan, Feb, Mar, Apr) used in modeling 
 ETo_cells_of_interest <- read.csv(file.path(resultsDir, 'ETo_cells_of_interest.csv'), stringsAsFactors = FALSE)
 colnames(ETo_cells_of_interest)
-getETo_daily_mn <- function(df, cellname, start_date, days) {
+getETo_daily_mn <- function(df, cellname, start_date, days, days_to_flood=4) {
   flood_yr <- unlist(strsplit(start_date, '-'))[1]
   df <- df[, c('dates', cellname)]
   df <- df[which(df$dates==paste0('01_01_', flood_yr)):which(df$dates==paste0('12_31_', flood_yr)),2] / 10
-  df[(as.integer(format(as.Date(start_date), format='%j'))):(as.integer(format(as.Date(start_date), format='%j'))+days-1)]}
-getETo_daily_mn(ETo_cells_of_interest, 'cell_5248', '2005-01-15', 30)
+  df[(as.integer(format(as.Date(start_date), format='%j'))+days_to_flood):(as.integer(format(as.Date(start_date), format='%j'))+days+days_to_flood)]
+}
+mean(getETo_daily_mn(ETo_cells_of_interest, 'cell_5248', '2005-01-15', 30))
