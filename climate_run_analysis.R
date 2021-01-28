@@ -1,8 +1,9 @@
 dataDir <- 'C:/Users/smdevine/Desktop/PostDoc/trafficability'
 resultsDir <- 'D:/PostDoc/Trafficability/climate_runs'
 saveDir <- file.path(resultsDir, 'overall_summaries')
+CIMISdir <- file.path(resultsDir, 'CIMIS_cell_selection')
 fnames <- list.files(saveDir)
-fnames
+fnames <- fnames[grepl(glob2rx('*.csv'), fnames)]
 dates <- gsub('trafficability_results_', '', fnames)
 dates <- gsub('.csv', '', dates)
 results_template <- read.csv(file.path(saveDir, fnames[1]), stringsAsFactors = FALSE)
@@ -18,8 +19,6 @@ for (i in seq_along(cellnames)) {
   write.csv(results, file.path(saveDir, 'by_cell', paste0(cellnames[i], '_results.csv')), row.names = FALSE)
 }
 list.files(file.path(saveDir, 'by_cell'))
-
-
 median_climate_results <- read.csv(file.path(saveDir, 'by_cell', 'cell_130212_results.csv'), stringsAsFactors = FALSE)
 colnames(median_climate_results)
 median_climate_stats_by_date <- do.call(cbind, lapply(median_climate_results[,4:15], function(x) summary(x)))
@@ -30,6 +29,7 @@ textural_classes
 sapply(textural_classes, function(x) sum(median_climate_results$textural_class==x))
 textural_classes <- textural_classes[textural_classes != 'sandy clay']
 textural_classes <- textural_classes[c(6,3,2,7,5,8,1,9,10,4)]
+textural_classes
 for (i in seq_along(textural_classes)) {
   climate_stats_by_date <- do.call(cbind, lapply(median_climate_results[median_climate_results$textural_class==textural_classes[i],4:15], function(x) { 
     result <- summary(x) 
@@ -63,12 +63,68 @@ sapply(list.files(file.path(saveDir, 'by_cell'), pattern = glob2rx('*.csv'), rec
 sapply(list.files(file.path(saveDir, 'by_cell'), pattern = glob2rx('*.csv'), recursive = FALSE), monthly_mean_summarize, month='03.15', month_name='Mar')
 sapply(list.files(file.path(saveDir, 'by_cell'), pattern = glob2rx('*.csv'), recursive = FALSE), monthly_mean_summarize, month='04.15', month_name='Apr')
 
+summarize_by_texture <- function(fname, texture) {
+  cellname <- gsub('_results.csv', '', fname)
+  df <- read.csv(file.path(saveDir, 'by_cell', fname), stringsAsFactors = FALSE)
+  climate_stats_by_month <- do.call(cbind, lapply(df[,4:ncol(df)], function(x) {
+    result <- summary(x[df$textural_class==texture])
+    if(length(result)==7) {
+      result
+    } else {result <- c(result, "NA's"=0)}
+    result <- c(result, 'n'=length(x[df$textural_class==texture]))}))
+  colnames(climate_stats_by_month) <- colnames(df)[4:ncol(df)]
+  if(!dir.exists(file.path(saveDir, 'by_cell', 'by_texture', texture))) {
+    dir.create(file.path(saveDir, 'by_cell', 'by_texture', texture))
+  } 
+  write.csv(climate_stats_by_month, file.path(saveDir, 'by_cell', 'by_texture', texture, paste0(cellname, '_', texture, '_summary.csv')), row.names = TRUE)
+}
+lapply(list.files(file.path(saveDir, 'by_cell'), pattern = glob2rx('*.csv'), recursive = FALSE), summarize_by_texture, texture='sandy loam')
+lapply(list.files(file.path(saveDir, 'by_cell'), pattern = glob2rx('*.csv'), recursive = FALSE), summarize_by_texture, texture='clay')
+lapply(list.files(file.path(saveDir, 'by_cell'), pattern = glob2rx('*.csv'), recursive = FALSE), summarize_by_texture, texture='loam')
+
+#now bind to climate data 
+ETo_cells_of_interest <- read.csv(file.path(CIMISdir, 'ETo_cells_of_interest.csv'), stringsAsFactors = FALSE)
+getETo_daily_mn <- function(cellname, start_date, days, days_to_flood=4) {
+  flood_yr <- unlist(strsplit(start_date, '-'))[1]
+  df <- ETo_cells_of_interest[, c('dates', cellname)]
+  df <- df[which(df$dates==paste0('01_01_', flood_yr)):which(df$dates==paste0('12_31_', flood_yr)),2] / 10
+  mean(df[(as.integer(format(as.Date(start_date), format='%j'))+days_to_flood):(as.integer(format(as.Date(start_date), format='%j'))+days+days_to_flood)])
+}
+
+# texture <- 'sandy loam'
+# stat <- 'Median'
+bind_CIMIS_to_days_to_traffic <- function(texture, stat) {
+  fnames <- list.files(file.path(saveDir, 'by_cell', 'by_texture', texture))
+  cellnames <- gsub(paste0('_', texture, '_summary.csv'), '', fnames)
+  results <- data.frame(cellname=as.character(sapply(cellnames, function(x) rep(x, times=12), simplify = TRUE)), date=NA, days_to_traffic=NA, meanET=NA, stringsAsFactors = FALSE)
+  results$days_to_traffic <- do.call(c, sapply(seq_along(fnames), function(i) {
+    df <- read.csv(file.path(saveDir, 'by_cell', 'by_texture', texture, fnames[i]), stringsAsFactors=FALSE, row.names=1)
+    df[stat,]}))
+  results$date <- do.call(c, lapply(seq_along(fnames), function(i) {
+    df <- read.csv(file.path(saveDir, 'by_cell', 'by_texture', texture, fnames[i]), stringsAsFactors=FALSE, row.names=1)
+    colnames(df)}))
+  results$date <- gsub('fd_', '', results$date)
+  results$date <- gsub('[.]', '-', results$date)
+  results$meanET <- mapply(FUN=getETo_daily_mn, cellname=results$cellname, start_date=results$date, days=ceiling(results$days_to_traffic))
+  
+  write.csv(results, file.path(saveDir, 'by_cell', 'by_texture', 'summaries', paste0('ETo_vs_days_to_traffic_', texture, '_', stat, '.csv')))
+  results
+}
+sandy_loam_summary <- bind_CIMIS_to_days_to_traffic(texture = 'sandy loam', stat = 'Median')
+clay_summary <- bind_CIMIS_to_days_to_traffic(texture = 'clay', stat = 'Median')
+loam_summary <- bind_CIMIS_to_days_to_traffic(texture = 'loam', stat = 'Median')
+plot(sandy_loam_summary$meanET, sandy_loam_summary$days_to_traffic)
+plot(clay_summary$meanET, clay_summary$days_to_traffic)
+plot(loam_summary$meanET, loam_summary$days_to_traffic)
+
 lapply(results_df[,4:14], function(x) tapply(x, results_df$textural_class, summary))
 
 lapply(results_df[,4:14], function(x) summary(x))
 lapply(results_df[,4:14], function(x) tapply(x, results_df$textural_class, summary))
 
 
+
+#old functions from summarize_results_v2.R draft analysis
 summarize_by_texture <- function(traff_def) {
   textural_class_summary <- do.call(cbind, lapply(unique(soils_modeled_10cm$textural_class), function(x) as.matrix(summary(soils_modeled_10cm[[traff_def]][soils_modeled_10cm$textural_class==x]))[1:6,]))
   colnames(textural_class_summary) <- unique(soils_modeled_10cm$textural_class)
