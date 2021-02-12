@@ -78,9 +78,18 @@ summarize_by_texture <- function(fname, texture) {
   } 
   write.csv(climate_stats_by_month, file.path(saveDir, 'by_cell', 'by_texture', texture, paste0(cellname, '_', texture, '_summary.csv')), row.names = TRUE)
 }
+textural_classes
+lapply(list.files(file.path(saveDir, 'by_cell'), pattern = glob2rx('*.csv'), recursive = FALSE), summarize_by_texture, texture='sand')
+lapply(list.files(file.path(saveDir, 'by_cell'), pattern = glob2rx('*.csv'), recursive = FALSE), summarize_by_texture, texture='loamy sand')
 lapply(list.files(file.path(saveDir, 'by_cell'), pattern = glob2rx('*.csv'), recursive = FALSE), summarize_by_texture, texture='sandy loam')
-lapply(list.files(file.path(saveDir, 'by_cell'), pattern = glob2rx('*.csv'), recursive = FALSE), summarize_by_texture, texture='clay')
+lapply(list.files(file.path(saveDir, 'by_cell'), pattern = glob2rx('*.csv'), recursive = FALSE), summarize_by_texture, texture='silt loam')
 lapply(list.files(file.path(saveDir, 'by_cell'), pattern = glob2rx('*.csv'), recursive = FALSE), summarize_by_texture, texture='loam')
+lapply(list.files(file.path(saveDir, 'by_cell'), pattern = glob2rx('*.csv'), recursive = FALSE), summarize_by_texture, texture='sandy clay loam')
+lapply(list.files(file.path(saveDir, 'by_cell'), pattern = glob2rx('*.csv'), recursive = FALSE), summarize_by_texture, texture='clay loam')
+lapply(list.files(file.path(saveDir, 'by_cell'), pattern = glob2rx('*.csv'), recursive = FALSE), summarize_by_texture, texture='silty clay loam')
+lapply(list.files(file.path(saveDir, 'by_cell'), pattern = glob2rx('*.csv'), recursive = FALSE), summarize_by_texture, texture='silty clay')
+lapply(list.files(file.path(saveDir, 'by_cell'), pattern = glob2rx('*.csv'), recursive = FALSE), summarize_by_texture, texture='clay')
+
 
 #now bind to climate data 
 ETo_cells_of_interest <- read.csv(file.path(CIMISdir, 'ETo_cells_of_interest.csv'), stringsAsFactors = FALSE)
@@ -106,13 +115,45 @@ bind_CIMIS_to_days_to_traffic <- function(texture, stat) {
   results$date <- gsub('fd_', '', results$date)
   results$date <- gsub('[.]', '-', results$date)
   results$meanET <- mapply(FUN=getETo_daily_mn, cellname=results$cellname, start_date=results$date, days=ceiling(results$days_to_traffic))
-  
+  results <- results[,c(1:2,4,3)]
   write.csv(results, file.path(saveDir, 'by_cell', 'by_texture', 'summaries', paste0('ETo_vs_days_to_traffic_', texture, '_', stat, '.csv')))
   results
 }
+sand_summary <- bind_CIMIS_to_days_to_traffic(texture = 'sand', stat = 'Median')
+loamy_sand_summary <- bind_CIMIS_to_days_to_traffic(texture = 'loamy sand', stat = 'Median')
 sandy_loam_summary <- bind_CIMIS_to_days_to_traffic(texture = 'sandy loam', stat = 'Median')
-clay_summary <- bind_CIMIS_to_days_to_traffic(texture = 'clay', stat = 'Median')
+silt_loam_summary <- bind_CIMIS_to_days_to_traffic(texture = 'silt loam', stat = 'Median')
 loam_summary <- bind_CIMIS_to_days_to_traffic(texture = 'loam', stat = 'Median')
+sandy_clay_loam_summary <- bind_CIMIS_to_days_to_traffic(texture = 'sandy clay loam', stat = 'Median')
+clay_loam_summary <- bind_CIMIS_to_days_to_traffic(texture = 'clay loam', stat = 'Median')
+silty_clay_loam_summary <- bind_CIMIS_to_days_to_traffic(texture = 'silty clay loam', stat = 'Median')
+silty_clay_summary <- bind_CIMIS_to_days_to_traffic(texture = 'silty clay', stat = 'Median')
+clay_summary <- bind_CIMIS_to_days_to_traffic(texture = 'clay', stat = 'Median')
+
+#Q1 summaries
+bind_CIMIS_to_days_to_traffic(texture = 'sand', stat = '1st Qu.')
+bind_CIMIS_to_days_to_traffic(texture = 'loamy sand', stat = '1st Qu.')
+bind_CIMIS_to_days_to_traffic(texture = 'sandy loam', stat = '1st Qu.')
+bind_CIMIS_to_days_to_traffic(texture = 'silt loam', stat = '1st Qu.')
+bind_CIMIS_to_days_to_traffic(texture = 'loam', stat = '1st Qu.')
+bind_CIMIS_to_days_to_traffic(texture = 'sandy clay loam', stat = '1st Qu.')
+bind_CIMIS_to_days_to_traffic(texture = 'clay loam', stat = '1st Qu.')
+bind_CIMIS_to_days_to_traffic(texture = 'silty clay loam', stat = '1st Qu.')
+bind_CIMIS_to_days_to_traffic(texture = 'silty clay', stat = '1st Qu.')
+bind_CIMIS_to_days_to_traffic(texture = 'clay', stat = '1st Qu.')
+
+#3rd Qu.
+bind_CIMIS_to_days_to_traffic(texture = 'sand', stat = '3rd Qu.')
+bind_CIMIS_to_days_to_traffic(texture = 'loamy sand', stat = '3rd Qu.')
+bind_CIMIS_to_days_to_traffic(texture = 'sandy loam', stat = '3rd Qu.')
+bind_CIMIS_to_days_to_traffic(texture = 'silt loam', stat = '3rd Qu.')
+bind_CIMIS_to_days_to_traffic(texture = 'loam', stat = '3rd Qu.')
+bind_CIMIS_to_days_to_traffic(texture = 'sandy clay loam', stat = '3rd Qu.')
+bind_CIMIS_to_days_to_traffic(texture = 'clay loam', stat = '3rd Qu.')
+bind_CIMIS_to_days_to_traffic(texture = 'silty clay loam', stat = '3rd Qu.')
+bind_CIMIS_to_days_to_traffic(texture = 'silty clay', stat = '3rd Qu.')
+bind_CIMIS_to_days_to_traffic(texture = 'clay', stat = '3rd Qu.')
+
 plot(sandy_loam_summary$meanET, sandy_loam_summary$days_to_traffic)
 plot(clay_summary$meanET, clay_summary$days_to_traffic)
 plot(loam_summary$meanET, loam_summary$days_to_traffic)
