@@ -465,7 +465,37 @@ AOI_10cm_muagg <- MUAggregate_wrapper(df1=comp_AOI_10cm, varnames = colnames(com
 AOI_10cm_muagg$textural_class <- textural.class.calc(sand = AOI_10cm_muagg$sand_10cm, silt = AOI_10cm_muagg$silt_10cm, clay = AOI_10cm_muagg$clay_10cm)
 table(AOI_10cm_muagg$textural_class)
 write.csv(AOI_10cm_muagg, file.path(trafficDir, 'ssurgo_intermediates', 'AOI_10cm_muagg.csv'), row.names = FALSE)
+colnames(AOI_10cm_muagg)
 
 mu_sagbi_10cm <- merge(mu_sagbi, AOI_10cm_muagg, by = 'mukey')
 names(mu_sagbi_10cm)
 shapefile(mu_sagbi_10cm, file.path(trafficDir, 'shapefiles', 'mu_sagbi_10cm.shp'), overwrite=TRUE)
+
+#acres by textural class
+textural_class_area <- tapply(mu_sagbi_10cm$area_ha, mu_sagbi_10cm$textural_class, sum)
+write.csv(textural_class_area, file.path(trafficDir, 'tables', 'texture_area_sagbi.csv'), row.names = TRUE)
+
+#export unique cimis_cell x textural class combos
+mu_sagbi_10cm$climsoil_code <- paste0(mu_sagbi_10cm$CIMIScell, '_', mu_sagbi_10cm$textural_class)
+climsoil_codes <- unique(mu_sagbi_10cm$climsoil_code)
+length(climsoil_codes)
+climsoil_df <- data.frame(code=climsoil_codes, CIMIS=NA, textural_class=NA, stringsAsFactors = FALSE)
+climsoil_df$CIMIS <- as.integer(sapply(climsoil_df$code, function(x) unlist(strsplit(x, '_'))[1]))
+climsoil_df$textural_class <- sapply(climsoil_df$code, function(x) unlist(strsplit(x, '_'))[2])
+unique(climsoil_df$textural_class)
+table(climsoil_df$textural_class)
+table(climsoil_df$textural_class[!climsoil_df$textural_class %in% c('proportions do not sum to 100+- 1', 'sandy clay', 'silt', 'NA')])
+climsoil_df <- climsoil_df[!climsoil_df$textural_class %in% c('proportions do not sum to 100+- 1', 'sandy clay', 'silt', 'NA'), ]
+dim(climsoil_df) #53709 to calc
+write.csv(climsoil_df, file.path(trafficDir, 'climate_soil', 'climsoil_unique.csv'), row.names = FALSE)
+
+#now add traffic estimates made in "make_trafficability_maps.R" to shapefile
+climsoil_traffic_est <- read.csv(file.path(trafficDir, 'climate_soil', 'Jan_Apr_traffic_est.csv'), stringsAsFactors = FALSE)
+mu_sagbi_10cm$Jan_days <- climsoil_traffic_est$Jan_days[match(mu_sagbi_10cm$climsoil_code, climsoil_traffic_est$code)]
+mu_sagbi_10cm$Feb_days <- climsoil_traffic_est$Feb_days[match(mu_sagbi_10cm$climsoil_code, climsoil_traffic_est$code)]
+mu_sagbi_10cm$Mar_days <- climsoil_traffic_est$Mar_days[match(mu_sagbi_10cm$climsoil_code, climsoil_traffic_est$code)]
+mu_sagbi_10cm$Apr_days <- climsoil_traffic_est$Apr_days[match(mu_sagbi_10cm$climsoil_code, climsoil_traffic_est$code)]
+shapefile(mu_sagbi_10cm, file.path(trafficDir, 'shapefiles', 'mu_sagbi_10cm.shp'), overwrite=TRUE)
+
+as.data.frame(mu_sagbi_10cm[123,])
+climsoil_traffic_est[climsoil_traffic_est$code=='218008_sandy loam',]
