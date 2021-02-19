@@ -280,3 +280,27 @@ hist(as.numeric(lapply(ETo[,6:ncol(ETo)], mean))) #centered over 3.8-4.0 mm/day
 max(as.numeric(lapply(ETo[,6:ncol(ETo)], mean))) #max 6.3 mm/day across all days for one cell
 min(as.numeric(lapply(ETo[,6:ncol(ETo)], mean))) #min 2.3 mm/day across all days for one cell
 write.csv(ETo, file.path(cellsofinterestDir, 'SpatialCIMIS.ETo.QCpass.csv'), row.names = FALSE)
+
+#create mean daily ET df for all cells of interest
+ETo <- read.csv(file.path(cellsofinterestDir, 'SpatialCIMIS.ETo.QCpass.csv'), stringsAsFactors = FALSE)
+head(ETo$dates)
+tail(ETo$dates)
+unique(ETo$DOY)
+?aggregate
+head(colnames(ETo))
+dailymeanETo <- aggregate(ETo[ ,6:ncol(ETo)], by=list(month=ETo$month, day=ETo$day), FUN=mean, simplify = TRUE)
+dim(dailymeanETo)
+class(dailymeanETo)
+dailymeanETo <- dailymeanETo[-which(dailymeanETo$month==2 & dailymeanETo$day==29), ]
+dailymeanETo <- dailymeanETo[order(dailymeanETo$month, dailymeanETo$day),]
+dailymeanETo[,1:2]
+lapply(dailymeanETo, class)
+write.csv(dailymeanETo, file.path(cellsofinterestDir, 'SpatialCIMIS.ETo.dailymean.csv'), row.names = FALSE)
+
+#calculate daily median
+dailymedianETo <- aggregate(ETo[ ,6:ncol(ETo)], by=list(month=ETo$month, day=ETo$day), FUN=median, simplify = TRUE)
+dim(dailymedianETo)
+class(dailymedianETo)
+dailymedianETo <- dailymedianETo[-which(dailymedianETo$month==2 & dailymedianETo$day==29), ]
+dailymedianETo <- dailymedianETo[order(dailymedianETo$month, dailymedianETo$day),]
+write.csv(dailymedianETo, file.path(cellsofinterestDir, 'SpatialCIMIS.ETo.dailymedian.csv'), row.names = FALSE)
