@@ -1,7 +1,18 @@
+library(extrafont)
+library(extrafontdb)
+#font_import() #only needs to be done one time after updating and re-installing R and moving and updating packages
+loadfonts(device = 'win')
 dataDir <- 'C:/Users/smdevine/Desktop/PostDoc/trafficability'
+FiguresDir <- file.path(dataDir, 'Figures')
 resultsDir <- 'D:/PostDoc/Trafficability/climate_runs'
 saveDir <- file.path(resultsDir, 'overall_summaries')
 CIMISdir <- file.path(resultsDir, 'CIMIS_cell_selection')
+#power function
+power_func <- function(x, b, z, a) {b*x^z + a}
+exp_func <- function(x, b, z, a) {b*exp(z*x) + a}
+power_simp_func <- function(x, b, z) {b*x^z}
+
+
 fnames <- list.files(saveDir)
 fnames <- fnames[grepl(glob2rx('*.csv'), fnames)]
 dates <- gsub('trafficability_results_', '', fnames)
@@ -90,7 +101,6 @@ lapply(list.files(file.path(saveDir, 'by_cell'), pattern = glob2rx('*.csv'), rec
 lapply(list.files(file.path(saveDir, 'by_cell'), pattern = glob2rx('*.csv'), recursive = FALSE), summarize_by_texture, texture='silty clay')
 lapply(list.files(file.path(saveDir, 'by_cell'), pattern = glob2rx('*.csv'), recursive = FALSE), summarize_by_texture, texture='clay')
 
-
 #now bind to climate data 
 ETo_cells_of_interest <- read.csv(file.path(CIMISdir, 'ETo_cells_of_interest.csv'), stringsAsFactors = FALSE)
 getETo_daily_mn <- function(cellname, start_date, days, days_to_flood=4) {
@@ -133,30 +143,120 @@ clay_summary <- bind_CIMIS_to_days_to_traffic(texture = 'clay', stat = 'Median')
 #Q1 summaries
 bind_CIMIS_to_days_to_traffic(texture = 'sand', stat = '1st Qu.')
 bind_CIMIS_to_days_to_traffic(texture = 'loamy sand', stat = '1st Qu.')
-bind_CIMIS_to_days_to_traffic(texture = 'sandy loam', stat = '1st Qu.')
+sandy_loam_q1 <- bind_CIMIS_to_days_to_traffic(texture = 'sandy loam', stat = '1st Qu.')
 bind_CIMIS_to_days_to_traffic(texture = 'silt loam', stat = '1st Qu.')
-bind_CIMIS_to_days_to_traffic(texture = 'loam', stat = '1st Qu.')
+loam_q1 <- bind_CIMIS_to_days_to_traffic(texture = 'loam', stat = '1st Qu.')
 bind_CIMIS_to_days_to_traffic(texture = 'sandy clay loam', stat = '1st Qu.')
-bind_CIMIS_to_days_to_traffic(texture = 'clay loam', stat = '1st Qu.')
+clay_loam_q1 <- bind_CIMIS_to_days_to_traffic(texture = 'clay loam', stat = '1st Qu.')
 bind_CIMIS_to_days_to_traffic(texture = 'silty clay loam', stat = '1st Qu.')
 bind_CIMIS_to_days_to_traffic(texture = 'silty clay', stat = '1st Qu.')
-bind_CIMIS_to_days_to_traffic(texture = 'clay', stat = '1st Qu.')
+clay_q1 <- bind_CIMIS_to_days_to_traffic(texture = 'clay', stat = '1st Qu.')
 
 #3rd Qu.
 bind_CIMIS_to_days_to_traffic(texture = 'sand', stat = '3rd Qu.')
 bind_CIMIS_to_days_to_traffic(texture = 'loamy sand', stat = '3rd Qu.')
-bind_CIMIS_to_days_to_traffic(texture = 'sandy loam', stat = '3rd Qu.')
+sandy_loam_q3 <- bind_CIMIS_to_days_to_traffic(texture = 'sandy loam', stat = '3rd Qu.')
 bind_CIMIS_to_days_to_traffic(texture = 'silt loam', stat = '3rd Qu.')
-bind_CIMIS_to_days_to_traffic(texture = 'loam', stat = '3rd Qu.')
+loam_q3 <- bind_CIMIS_to_days_to_traffic(texture = 'loam', stat = '3rd Qu.')
 bind_CIMIS_to_days_to_traffic(texture = 'sandy clay loam', stat = '3rd Qu.')
-bind_CIMIS_to_days_to_traffic(texture = 'clay loam', stat = '3rd Qu.')
+clay_loam_q3 <- bind_CIMIS_to_days_to_traffic(texture = 'clay loam', stat = '3rd Qu.')
 bind_CIMIS_to_days_to_traffic(texture = 'silty clay loam', stat = '3rd Qu.')
 bind_CIMIS_to_days_to_traffic(texture = 'silty clay', stat = '3rd Qu.')
-bind_CIMIS_to_days_to_traffic(texture = 'clay', stat = '3rd Qu.')
+clay_q3 <- bind_CIMIS_to_days_to_traffic(texture = 'clay', stat = '3rd Qu.')
 
-plot(sandy_loam_summary$meanET, sandy_loam_summary$days_to_traffic)
-plot(clay_summary$meanET, clay_summary$days_to_traffic)
-plot(loam_summary$meanET, loam_summary$days_to_traffic)
+#function to estimate power curve parameters to fit traffic vs. daily mean ET by textural class, documenting R^2
+power_curve_fit <- function(df, texture) {
+  nls_fit <- nls(days_to_traffic ~ b*meanET^z+a, data = df, start = list(b=2, z=-0.8, a=3), control=list(warnOnly=TRUE))
+  nls_fit_summary <- summary(nls_fit)
+  plot(df$meanET, df$days_to_traffic, main=texture)
+  curve(power_func(x, b=nls_fit_summary$coefficients[1,1], z=nls_fit_summary$coefficients[2,1], a=nls_fit_summary$coefficients[3,1]), from=min(df$meanET), to=max(df$meanET), lty=2, add=TRUE)
+  data.frame(texture_class=texture, b=nls_fit_summary$coefficients[1,1], z=nls_fit_summary$coefficients[2,1], a=nls_fit_summary$coefficients[3,1], R2=cor(predict(nls_fit), df$days_to_traffic)^2, stringsAsFactors = FALSE)
+}
+power_curve_simp_fit <- function(df, texture) {
+  nls_fit <- nls(days_to_traffic ~ b*meanET^z, data = df, start = list(b=2, z=-0.8), control=list(warnOnly=TRUE))
+  nls_fit_summary <- summary(nls_fit)
+  plot(df$meanET, df$days_to_traffic, main=texture)
+  curve(power_simp_func(x, b=nls_fit_summary$coefficients[1,1], z=nls_fit_summary$coefficients[2,1]), from=min(df$meanET), to=max(df$meanET), lty=2, add=TRUE)
+  data.frame(texture_class=texture, b=nls_fit_summary$coefficients[1,1], z=nls_fit_summary$coefficients[2,1], R2=cor(predict(nls_fit), df$days_to_traffic)^2, stringsAsFactors = FALSE)
+}
+
+power_curve_results <- do.call(rbind, mapply(FUN=power_curve_fit, list(sand_summary, loamy_sand_summary, sandy_loam_summary, silt_loam_summary, loam_summary, sandy_clay_loam_summary, clay_loam_summary, silty_clay_loam_summary, silty_clay_summary, clay_summary), textural_classes, SIMPLIFY = FALSE))
+power_curve_results
+write.csv(power_curve_results, file.path(saveDir, 'by_cell', 'by_texture', 'summaries', 'math_models', 'power_curve_median.csv'), row.names = FALSE)
+write.csv(power_curve_results, file.path(dataDir, 'climate_soil', 'power_curve_median.csv'), row.names = FALSE)
+
+power_curve_q1 <- do.call(rbind, mapply(FUN=power_curve_fit, list(sandy_loam_q1, loam_q1, clay_loam_q1, clay_q1), c('sandy loam', 'loam', 'clay loam', 'clay'), SIMPLIFY = FALSE))
+write.csv(power_curve_q1, file.path(saveDir, 'by_cell', 'by_texture', 'summaries', 'math_models', 'power_curve_q1.csv'), row.names = FALSE)
+
+power_curve_fit(clay_q3, 'clay')
+power_curve_fit(df=clay_q1, 'clay')
+power_curve_fit(clay_summary, 'clay')
+
+power_curve_q3 <- do.call(rbind, mapply(FUN=power_curve_fit, list(sandy_loam_q3, loam_q3, clay_loam_q3), c('sandy loam', 'loam', 'clay loam'), SIMPLIFY = FALSE))
+write.csv(power_curve_q3, file.path(saveDir, 'by_cell', 'by_texture', 'summaries', 'math_models', 'power_curve_q3.csv'), row.names = FALSE)
+
+
+power_curve_q3_clay <- power_curve_simp_fit(df=clay_q3, texture = 'clay')
+
+# df <- sandy_loam_summary
+# texture <- 'sandy loam'
+exp_decay_fit <- function(df, texture) {
+  nls_fit <- nls(days_to_traffic ~ b*exp(meanET*z)+a, data = df, start = list(b=18, z=-3, a=4), control=list(warnOnly=TRUE))
+  nls_fit_summary <- summary(nls_fit)
+  plot(df$meanET, df$days_to_traffic, main=texture)
+  curve(exp_func(x, b=nls_fit_summary$coefficients[1,1], z=nls_fit_summary$coefficients[2,1], a=nls_fit_summary$coefficients[3,1]), from=min(df$meanET), to=max(df$meanET), lty=2, add=TRUE)
+  data.frame(texture_class=texture, b=nls_fit_summary$coefficients[1,1], z=nls_fit_summary$coefficients[2,1], a=nls_fit_summary$coefficients[3,1], R2=cor(predict(nls_fit), df$days_to_traffic)^2, stringsAsFactors = FALSE)
+}
+exp_decay_results <- do.call(rbind, mapply(FUN=exp_decay_fit, list(sand_summary, loamy_sand_summary, sandy_loam_summary, silt_loam_summary, loam_summary, sandy_clay_loam_summary, clay_loam_summary, silty_clay_loam_summary, silty_clay_summary, clay_summary), textural_classes, SIMPLIFY = FALSE))
+write.csv(exp_decay_results, file.path(saveDir, 'by_cell', 'by_texture', 'summaries', 'math_models', 'exp_decay_median.csv'), row.names = FALSE)
+write.csv(exp_decay_results, file.path(dataDir, 'climate_soil', 'exp_decay_median.csv'), row.names = FALSE)
+
+exp_decay_q1 <- do.call(rbind, mapply(FUN=exp_decay_fit, list(sandy_loam_q1, loam_q1, clay_loam_q1, clay_q1), c('sandy loam', 'loam', 'clay loam', 'clay'), SIMPLIFY = FALSE))
+write.csv(exp_decay_q1, file.path(saveDir, 'by_cell', 'by_texture', 'summaries', 'math_models', 'exp_decay_q1.csv'), row.names = FALSE)
+
+exp_decay_q3 <- do.call(rbind, mapply(FUN=exp_decay_fit, list(sandy_loam_q3, loam_q3, clay_loam_q3, clay_q3), c('sandy loam', 'loam', 'clay loam', 'clay'), SIMPLIFY = FALSE))
+write.csv(exp_decay_q3, file.path(saveDir, 'by_cell', 'by_texture', 'summaries', 'math_models', 'exp_decay_q3.csv'), row.names = FALSE)
+
+exp_decay_fit(df=clay_q3, texture = 'clay')
+exp_decay_fit(df=clay_q1, texture = 'clay')
+exp_decay_fit(df=clay_summary, texture = 'clay')
+
+#make a figure showing clay, clay loam, sandy loam, and loam
+
+texture_colors <- data.frame(textures=c('clay', 'silty clay' , 'silty clay loam', 'clay loam', 'silt loam', 'sandy clay loam', 'loam', 'sandy loam', 'loamy sand', 'sand'), red=c(169, 0, 0, 223, 0, 170, 255, 230, 115, 255), green=c(0, 112, 197, 115, 168, 255, 0, 152, 76, 255), blue=c(230, 255, 255, 255, 132, 0, 0, 0, 0, 0), stringsAsFactors = FALSE)
+
+tiff(file = file.path(FiguresDir, 'days_to_traffic_vs_ETo_all_textures.tif'), family = 'Times New Roman', width = 6.5, height = 3.75, pointsize = 11, units = 'in', res=800, compression = 'lzw')
+par(mar=c(3.5, 4.5, 0.5, 0.5))
+curve(power_func(x, b=power_curve_results$b[power_curve_results$texture_class=='clay'], z=power_curve_results$z[power_curve_results$texture_class=='clay'], a=power_curve_results$a[power_curve_results$texture_class=='clay']), from=0.11, to=0.68, lwd=1.5, col=rgb(red = 169/255, green = 0, blue = 230/255), xlab='', ylab='Days to trafficability after flooding', ylim=c(0,50), xlim = c(0.12, 0.67))
+mtext(text=expression(paste('ETo (cm ', day^-1, ')')), side=1, line=2.5)
+curve(exp_func(x, b=exp_decay_results$b[exp_decay_results$texture_class=='silty clay'], z=exp_decay_results$z[exp_decay_results$texture_class=='silty clay'], a=exp_decay_results$a[exp_decay_results$texture_class=='silty clay']), from=0.11, to=0.68, lwd=1.5, col=rgb(red = 0/255, green = 112/255, blue = 255/255), add=TRUE)
+for (i in 3:10) {
+  curve(power_func(x, b=power_curve_results$b[power_curve_results$texture_class==texture_colors$textures[i]], z=power_curve_results$z[power_curve_results$texture_class==texture_colors$textures[i]], a=power_curve_results$a[power_curve_results$texture_class==texture_colors$textures[i]]), from=0.11, to=0.68, lwd=1.5, col=rgb(red = texture_colors$red[i]/255, green = texture_colors$green[i]/255, blue = texture_colors$blue[i]/255), add=TRUE)
+}
+legend('topright', legend=texture_colors$textures, col=rgb(red=texture_colors$red/255, green = texture_colors$green/255, blue = texture_colors$blue/255), lty=1, lwd=1.5, ncol=2)
+dev.off()
+
+#make a figure showing IQRs for clay, clay loam, loam, and sandy loam
+tiff(file = file.path(FiguresDir, 'days_to_traffic_vs_ETo_all_IQRs_4textures.tif'), family = 'Times New Roman', width = 6.5, height = 3.75, pointsize = 11, units = 'in', res=800, compression = 'lzw')
+par(mar=c(3.5, 4.5, 0.5, 0.5))
+curve(power_func(x, b=power_curve_results$b[power_curve_results$texture_class=='clay loam'], z=power_curve_results$z[power_curve_results$texture_class=='clay loam'], a=power_curve_results$a[power_curve_results$texture_class=='clay loam']), from=0.11, to=0.68, lwd=1.5, col=rgb(texture_colors[texture_colors$textures=='clay loam',2:4]/255), xlab='', ylab='Days to trafficability after flooding', xlim = c(0.12, 0.67), ylim=c(0,50))
+mtext(text=expression(paste('ETo (cm ', day^-1, ')')), side=1, line=2.5)
+curve(power_func(x, b=power_curve_q1$b[power_curve_q1$texture_class=='clay loam'], z=power_curve_q1$z[power_curve_q1$texture_class=='clay loam'], a=power_curve_q1$a[power_curve_q1$texture_class=='clay loam']), from=0.11, to=0.68, lwd=1.5, col=rgb(texture_colors[texture_colors$textures=='clay loam',2:4]/255), add=TRUE, lty=2)
+curve(power_func(x, b=power_curve_q3$b[power_curve_q3$texture_class=='clay loam'], z=power_curve_q3$z[power_curve_q3$texture_class=='clay loam'], a=power_curve_q3$a[power_curve_q3$texture_class=='clay loam']), from=0.11, to=0.68, lwd=1.5, col=rgb(texture_colors[texture_colors$textures=='clay loam',2:4]/255), add=TRUE, lty=2)
+
+curve(power_func(x, b=power_curve_results$b[power_curve_results$texture_class=='loam'], z=power_curve_results$z[power_curve_results$texture_class=='loam'], a=power_curve_results$a[power_curve_results$texture_class=='loam']), from=0.11, to=0.68, lwd=1.5, col=rgb(texture_colors[texture_colors$textures=='loam',2:4]/255), add=TRUE)
+curve(power_func(x, b=power_curve_q1$b[power_curve_q1$texture_class=='loam'], z=power_curve_q1$z[power_curve_q1$texture_class=='loam'], a=power_curve_q1$a[power_curve_q1$texture_class=='loam']), from=0.11, to=0.68, lwd=1.5, col=rgb(texture_colors[texture_colors$textures=='loam',2:4]/255), add=TRUE, lty=2)
+curve(power_func(x, b=power_curve_q3$b[power_curve_q3$texture_class=='loam'], z=power_curve_q3$z[power_curve_q3$texture_class=='loam'], a=power_curve_q3$a[power_curve_q3$texture_class=='loam']), from=0.11, to=0.68, lwd=1.5, col=rgb(texture_colors[texture_colors$textures=='loam',2:4]/255), add=TRUE, lty=2)
+
+curve(power_func(x, b=power_curve_results$b[power_curve_results$texture_class=='sandy loam'], z=power_curve_results$z[power_curve_results$texture_class=='sandy loam'], a=power_curve_results$a[power_curve_results$texture_class=='sandy loam']), from=0.11, to=0.68, lwd=1.5, col=rgb(texture_colors[texture_colors$textures=='sandy loam',2:4]/255), add=TRUE)
+curve(power_func(x, b=power_curve_q1$b[power_curve_q1$texture_class=='sandy loam'], z=power_curve_q1$z[power_curve_q1$texture_class=='sandy loam'], a=power_curve_q1$a[power_curve_q1$texture_class=='sandy loam']), from=0.11, to=0.68, lwd=1.5, col=rgb(texture_colors[texture_colors$textures=='sandy loam',2:4]/255), add=TRUE, lty=2)
+curve(power_func(x, b=power_curve_q3$b[power_curve_q3$texture_class=='sandy loam'], z=power_curve_q3$z[power_curve_q3$texture_class=='sandy loam'], a=power_curve_q3$a[power_curve_q3$texture_class=='sandy loam']), from=0.11, to=0.68, lwd=1.5, col=rgb(texture_colors[texture_colors$textures=='sandy loam',2:4]/255), add=TRUE, lty=2)
+
+curve(power_func(x, b=power_curve_results$b[power_curve_results$texture_class=='clay'], z=power_curve_results$z[power_curve_results$texture_class=='clay'], a=power_curve_results$a[power_curve_results$texture_class=='clay']), from=0.11, to=0.68, lwd=1.5, col=rgb(texture_colors[texture_colors$textures=='clay',2:4]/255), add=TRUE)
+curve(power_func(x, b=power_curve_q1$b[power_curve_q1$texture_class=='clay'], z=power_curve_q1$z[power_curve_q1$texture_class=='clay'], a=power_curve_q1$a[power_curve_q1$texture_class=='clay']), from=0.11, to=0.68, lwd=1.5, col=rgb(texture_colors[texture_colors$textures=='clay',2:4]/255), add=TRUE, lty=2)
+curve(exp_func(x, b=exp_decay_q3$b[exp_decay_q3$texture_class=='clay'], z=exp_decay_q3$z[exp_decay_q3$texture_class=='clay'], a=exp_decay_q3$a[exp_decay_q3$texture_class=='clay']), from=0.11, to=0.68, lwd=1.5, col=rgb(texture_colors[texture_colors$textures=='clay',2:4]/255), add=TRUE, lty=2)
+legend('topright', legend=c('clay', 'clay loam', 'loam', 'sandy loam'), col=rgb(texture_colors[which(texture_colors$textures %in% c('clay', 'clay loam', 'loam', 'sandy loam')),2:4]/255), lty=1, lwd=1.5, ncol=2)
+dev.off()
 
 lapply(results_df[,4:14], function(x) tapply(x, results_df$textural_class, summary))
 
