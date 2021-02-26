@@ -491,11 +491,24 @@ write.csv(climsoil_df, file.path(trafficDir, 'climate_soil', 'climsoil_unique.cs
 
 #now add traffic estimates made in "make_trafficability_maps.R" to shapefile
 climsoil_traffic_est <- read.csv(file.path(trafficDir, 'climate_soil', 'Jan_Apr_traffic_est.csv'), stringsAsFactors = FALSE)
-mu_sagbi_10cm$Jan_days <- climsoil_traffic_est$Jan_days[match(mu_sagbi_10cm$climsoil_code, climsoil_traffic_est$code)]
-mu_sagbi_10cm$Feb_days <- climsoil_traffic_est$Feb_days[match(mu_sagbi_10cm$climsoil_code, climsoil_traffic_est$code)]
-mu_sagbi_10cm$Mar_days <- climsoil_traffic_est$Mar_days[match(mu_sagbi_10cm$climsoil_code, climsoil_traffic_est$code)]
-mu_sagbi_10cm$Apr_days <- climsoil_traffic_est$Apr_days[match(mu_sagbi_10cm$climsoil_code, climsoil_traffic_est$code)]
-shapefile(mu_sagbi_10cm, file.path(trafficDir, 'shapefiles', 'mu_sagbi_10cm.shp'), overwrite=TRUE)
+mu_traffic_results <- mu_sagbi_10cm
+mu_traffic_results$Jan_days <- climsoil_traffic_est$Jan_days[match(mu_traffic_results$climsoil_code, climsoil_traffic_est$code)]
+sum(is.na(mu_traffic_results$Jan_days))
+mu_traffic_results <- mu_traffic_results[!is.na(mu_traffic_results$Jan_days),]
+sum(mu_traffic_results$area_ha) #7,100,622 not NA
+mu_traffic_results$Feb_days <- climsoil_traffic_est$Feb_days[match(mu_traffic_results$climsoil_code, climsoil_traffic_est$code)]
+sum(is.na(mu_traffic_results$Feb_days))
+mu_traffic_results$Mar_days <- climsoil_traffic_est$Mar_days[match(mu_traffic_results$climsoil_code, climsoil_traffic_est$code)]
+sum(is.na(mu_traffic_results$Mar_days))
+mu_traffic_results$Apr_days <- climsoil_traffic_est$Apr_days[match(mu_traffic_results$climsoil_code, climsoil_traffic_est$code)]
+sum(is.na(mu_traffic_results$Apr_days))
+
+shapefile(mu_traffic_results, file.path(trafficDir, 'shapefiles', 'mu_traffic_results.shp'), overwrite=TRUE)
+as.data.frame(mu_traffic_results[mu_traffic_results$climsoil_code=='100114_NA',])
+dim(mu_traffic_results)
+summary(mu_traffic_results$Jan_days)
+summary(mu_traffic_results$Feb_days)
+?shapefile
 
 as.data.frame(mu_sagbi_10cm[123,])
 climsoil_traffic_est[climsoil_traffic_est$code=='218008_sandy loam',]
