@@ -51,3 +51,26 @@ getETo_daily_mn <- function(df, cellname, start_date, days, days_to_flood=4) {
   df[(as.integer(format(as.Date(start_date), format='%j'))+days_to_flood):(as.integer(format(as.Date(start_date), format='%j'))+days+days_to_flood)]
 }
 mean(getETo_daily_mn(ETo_cells_of_interest, 'cell_5248', '2005-01-15', 30))
+
+#new cells of interest file
+climateDir <- 'C:/Users/smdevine/Desktop/PostDoc/trafficability/CIMIS'
+ETo <- read.csv(file.path(climateDir, 'SpatialCIMIS.ETo.QCpass.csv'), stringsAsFactors=FALSE)
+ETo_annual <- aggregate(ETo[,6:ncol(ETo)], by=list(year=ETo$year), FUN = sum)
+ETo_annual_ranked <- as.data.frame(t(ETo_annual[,2:ncol(ETo_annual)]))
+colnames(ETo_annual_ranked) <- paste0('yr_', 2004:2018)
+ETo_annual_ranked$meanETo <- apply(ETo_annual_ranked, 1, mean)
+ETo_annual_ranked <- ETo_annual_ranked[order(ETo_annual_ranked$meanETo),]
+write.csv(ETo_annual_ranked, file.path(climateDir, 'annual_ETo_ranked_AOI.csv'), row.names=TRUE)
+colnames(ETo_cells_of_interest)
+which(rownames(ETo_annual_ranked)=='cell_5248')/nrow(ETo_annual_ranked) #5248 was not in AOI
+which(rownames(ETo_annual_ranked)=='cell_18033')/nrow(ETo_annual_ranked)
+which(rownames(ETo_annual_ranked)=='cell_102682')/nrow(ETo_annual_ranked)
+which(rownames(ETo_annual_ranked)=='cell_119481')/nrow(ETo_annual_ranked)
+which(rownames(ETo_annual_ranked)=='cell_130212')/nrow(ETo_annual_ranked)
+which(rownames(ETo_annual_ranked)=='cell_155771')/nrow(ETo_annual_ranked)
+which(rownames(ETo_annual_ranked)=='cell_168006')/nrow(ETo_annual_ranked)
+which(rownames(ETo_annual_ranked)=='cell_174576')/nrow(ETo_annual_ranked)
+which(rownames(ETo_annual_ranked)=='cell_181807')/nrow(ETo_annual_ranked)
+which(rownames(ETo_annual_ranked)=='cell_187903')/nrow(ETo_annual_ranked)
+which(rownames(ETo_annual_ranked)=='cell_239134')/nrow(ETo_annual_ranked)
+
