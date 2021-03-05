@@ -296,35 +296,7 @@ text(x=1.35, y=48, 'B')
 dev.off()
 
 
-lapply(results_df[,4:14], function(x) tapply(x, results_df$textural_class, summary))
-
-lapply(results_df[,4:14], function(x) summary(x))
-lapply(results_df[,4:14], function(x) tapply(x, results_df$textural_class, summary))
 
 
 
-#old functions from summarize_results_v2.R draft analysis
-summarize_by_texture <- function(traff_def) {
-  textural_class_summary <- do.call(cbind, lapply(unique(soils_modeled_10cm$textural_class), function(x) as.matrix(summary(soils_modeled_10cm[[traff_def]][soils_modeled_10cm$textural_class==x]))[1:6,]))
-  colnames(textural_class_summary) <- unique(soils_modeled_10cm$textural_class)
-  textural_class_summary <- rbind(textural_class_summary, n=as.integer(sapply(unique(soils_modeled_10cm$textural_class), function(x) sum(!is.na(soils_modeled_10cm[[traff_def]][soils_modeled_10cm$textural_class==x])))))
-  textural_class_summary <- rbind(textural_class_summary, mean_clay=sapply(unique(soils_modeled_10cm$textural_class), function(x) mean(soils_modeled_10cm$clay_10cm[soils_modeled_10cm$textural_class==x], na.rm=TRUE)))
-  textural_class_summary <- rbind(textural_class_summary, Not_Determined=as.integer(sapply(unique(soils_modeled_10cm$textural_class), function(x) sum(is.na(soils_modeled_10cm[[traff_def]][soils_modeled_10cm$textural_class==x])))))
-  colnames(textural_class_summary)[order(textural_class_summary[8,])]
-  textural_class_summary <- textural_class_summary[,order(textural_class_summary[8,])]
-  print(textural_class_summary)
-  write.csv(textural_class_summary, file.path(tablesDir, paste0('summary_by_textural_class_0_10cm_', traff_def, '_unique.csv')), row.names = TRUE)
-}
-summarize_by_texture('result_opt1')
 
-
-summarize_by_names <- function(traff_def) {
-  soilname_summary <- do.call(cbind, lapply(names(soil_name_mas30), function(x) as.matrix(summary(soils_modeled_10cm[[traff_def]][soils_modeled_10cm$soil_name==x]))[1:6,]))
-  colnames(soilname_summary) <- names(soil_name_mas30)
-  soilname_summary <- rbind(soilname_summary, n=as.integer(sapply(names(soil_name_mas30), function(x) sum(!is.na(soils_modeled_10cm[[traff_def]][soils_modeled_10cm$soil_name==x])))))
-  soilname_summary <- rbind(soilname_summary, mean_clay=sapply(names(soil_name_mas30), function(x) mean(soils_modeled_10cm$clay_10cm[soils_modeled_10cm$soil_name==x], na.rm=TRUE)))
-  soilname_summary <- rbind(soilname_summary, texture=sapply(names(soil_name_mas30), function(x) paste(unique(soils_modeled_10cm$textural_class[soils_modeled_10cm$soil_name==x]), collapse = ', ')))
-  print(soilname_summary)
-  write.csv(soilname_summary, file.path(tablesDir, paste0('summary_by_soilname_0_10cm_properties_', traff_def, '_rosetta5.csv')), row.names = TRUE)
-}
-summarize_by_names('result_opt1')
