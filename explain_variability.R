@@ -1,13 +1,160 @@
-dataDir <- 'C:/Users/smdevine/Desktop/PostDoc/trafficability'
+laptop <- TRUE
+if (laptop) {
+  dataDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/'
+  workDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/data from Stathis'
+} else {dataDir <- 'C:/Users/smdevine/Desktop/PostDoc/trafficability'}
+
 soil_df <- read.csv(file.path(dataDir, 'soils_of_interest', 'soils_modeled_revised_QCpass_Oct2020.csv'), stringsAsFactors = FALSE)
 dim(soil_df)
 colnames(soil_df)
 list.files(file.path(dataDir, 'climate_run_summaries', 'by_cell'))
 cell_130212_results <- read.csv(file.path(dataDir, 'climate_run_summaries', 'by_cell', 'cell_130212_results.csv'), stringsAsFactors = FALSE)
 dim(cell_130212_results)
+cell_130212_results <- cell_130212_results[cell_130212_results$textural_class!='sandy clay',]
 cell_130212_results$textural_class <- NULL
 soils_130212_results <- merge(soil_df, cell_130212_results, by='cokey')
+
+#check results by date and textural class
 tapply(soils_130212_results$fd_2009.01.15, soils_130212_results$textural_class, summary)
 tapply(soils_130212_results$fd_2009.02.15, soils_130212_results$textural_class, summary)
 tapply(soils_130212_results$fd_2009.03.15, soils_130212_results$textural_class, summary)
 tapply(soils_130212_results$fd_2009.04.15, soils_130212_results$textural_class, summary)
+
+#textural classes (ordered) for parsing results
+textural_classes <- unique(soil_df$textural_class)
+textural_classes <- textural_classes[textural_classes != 'sandy clay']
+textural_classes <- textural_classes[c(6,3,2,7,5,8,1,9,10,4)]
+textural_classes
+
+#summary table of 0-10 cm soil properties by textural class
+soil_properties_by_texture <- data.frame(texture=textural_classes, sand=NA, silt=NA, clay=NA, BD=NA, ksat=NA, theta_r=NA, theta_S=NA, alpha=NA, n=NA, theta_wp=NA, theta_fc=NA, h_fc=NA, stringsAsFactors = FALSE)
+for (i in seq_along(textural_classes)) {
+  soil_properties_by_texture[i,2:ncol(soil_properties_by_texture)] <- c(median(soil_df$sand_10cm[soil_df$textural_class==textural_classes[i]]), median(soil_df$silt_10cm[soil_df$textural_class==textural_classes[i]]), median(soil_df$clay_10cm[soil_df$textural_class==textural_classes[i]]), median(soil_df$bd_13b_10cm[soil_df$textural_class==textural_classes[i]], na.rm = TRUE), median(soil_df$ksat_10cm[soil_df$textural_class==textural_classes[i]]), median(soil_df$theta_r_10cm[soil_df$textural_class==textural_classes[i]]), median(soil_df$theta_s_10cm[soil_df$textural_class==textural_classes[i]]), median(soil_df$alpha_10cm[soil_df$textural_class==textural_classes[i]]), median(soil_df$n_10cm[soil_df$textural_class==textural_classes[i]]),  median(soil_df$theta_wp_10cm[soil_df$textural_class==textural_classes[i]]), median(soil_df$theta_fc_10cm[soil_df$textural_class==textural_classes[i]]), median(soil_df$h_fc_10cm[soil_df$textural_class==textural_classes[i]]))
+}
+write.csv(soil_properties_by_texture, file.path(dataDir, 'soils_of_interest', 'median_0_10cm_soil_props_by_texture.csv'), row.names = FALSE)
+
+
+lapply(soils_130212_results[,33:44], function(x) summary(lm(x ~ soils_130212_results$textural_class)))
+lapply(soils_130212_results[,33:44], function(x) summary(lm(x ~ soils_130212_results$clay_10cm + soils_130212_results$silt_10cm)))
+
+#exploratory analysis function
+exploratory_analysis <- function(df, varname, result) {
+  for (i in seq_along(textural_classes)) {
+    plot(df[[varname]][df$textural_class==textural_classes[i]], df[[result]][df$textural_class==textural_classes[i]], main=textural_classes[i])
+    print(textural_classes[i])
+    print(summary(lm(df[[result]][df$textural_class==textural_classes[i]] ~ df[[varname]][df$textural_class==textural_classes[i]])))
+  }
+}
+exploratory_analysis(df = soils_130212_results, varname = 'bd_13b_10cm', result = 'fd_2009.02.15')
+exploratory_analysis(df = soils_130212_results, varname = 'ksat_10cm', result = 'fd_2009.02.15')
+exploratory_analysis(df = soils_130212_results, varname = 'theta_s_10cm', result = 'fd_2009.02.15')
+exploratory_analysis(df = soils_130212_results, varname = 'theta_r_10cm', result = 'fd_2009.02.15')
+exploratory_analysis(df = soils_130212_results, varname = 'alpha_10cm', result = 'fd_2009.02.15')
+exploratory_analysis(df = soils_130212_results, varname = 'alpha_10cm', result = 'theta_0.33b_10cm')
+exploratory_analysis(df = soils_130212_results, varname = 'alpha_10cm', result = 'h_fc_10cm')
+exploratory_analysis(df = soils_130212_results, varname = 'n_10cm', result = 'fd_2009.02.15')
+exploratory_analysis(df = soils_130212_results, varname = 'h_fc_10cm', result = 'fd_2009.02.15')
+exploratory_analysis(df = soils_130212_results, varname = 'theta_fc_10cm', result = 'fd_2009.02.15')
+exploratory_analysis(df = soils_130212_results, varname = 'theta_wp_10cm', result = 'fd_2009.02.15')
+exploratory_analysis(df = soils_130212_results, varname = 'theta_0.33b_10cm', result = 'fd_2009.02.15')
+exploratory_analysis(df = soils_130212_results, varname = 'theta_15b_10cm', result = 'fd_2009.02.15')
+exploratory_analysis(df = soils_130212_results, varname = 'clay_10cm', result = 'fd_2009.02.15')
+exploratory_analysis(df = soils_130212_results, varname = 'silt_10cm', result = 'fd_2009.02.15')
+exploratory_analysis(df = soils_130212_results, varname = 'sand_10cm', result = 'fd_2009.02.15')
+
+#get 25th, 50th, and 75th results' percentiles soil cokeys in each textural class across dates for further investigation of water retention function and fluxes across different depths
+colnames(soils_130212_results)
+median_soils <- data.frame(texture=textural_classes, fd_2005.01.15=NA, fd_2005.02.15=NA, fd_2005.03.15=NA, fd_2005.04.15=NA, fd_2009.01.15=NA, fd_2009.02.15=NA, fd_2009.03.15=NA, fd_2009.04.15=NA, fd_2015.01.15=NA, fd_2015.02.15=NA, fd_2015.03.15=NA, fd_2015.04.15=NA, stringsAsFactors = FALSE)
+Q15_soils <- data.frame(texture=textural_classes, fd_2005.01.15=NA, fd_2005.02.15=NA, fd_2005.03.15=NA, fd_2005.04.15=NA, fd_2009.01.15=NA, fd_2009.02.15=NA, fd_2009.03.15=NA, fd_2009.04.15=NA, fd_2015.01.15=NA, fd_2015.02.15=NA, fd_2015.03.15=NA, fd_2015.04.15=NA, stringsAsFactors = FALSE)
+Q85_soils <- data.frame(texture=textural_classes, fd_2005.01.15=NA, fd_2005.02.15=NA, fd_2005.03.15=NA, fd_2005.04.15=NA, fd_2009.01.15=NA, fd_2009.02.15=NA, fd_2009.03.15=NA, fd_2009.04.15=NA, fd_2015.01.15=NA, fd_2015.02.15=NA, fd_2015.03.15=NA, fd_2015.04.15=NA, stringsAsFactors = FALSE)
+
+test <- quantile(soils_130212_results$fd_2005.02.15[soils_130212_results$textural_class=='silty clay'], probs = c(0.15,0.5,0.85), na.rm = TRUE)
+test
+test2 <- min(abs(soils_130212_results$fd_2005.02.15[soils_130212_results$textural_class=='silty clay']-test[1]), na.rm = TRUE)
+soils_130212_results$cokey[which(soils_130212_results$textural_class=='silty loam' & soils_130212_results$fd_2005.02.15==test[1])]
+soils_130212_results$cokey[which(soils_130212_results$textural_class=='silty loam' & (soils_130212_results$fd_2005.02.15-test[1]==test2))]
+soils_130212_results[soils_130212_results$cokey==10679673,]
+soils_130212_results[soils_130212_results$fd_2005.02.15==7.7 & soils_130212_results$textural_class=='loamy sand',]
+
+i <- 9
+input_df <- soils_130212_results
+j <- 2
+identify_soil <- function(input_df) {
+  for (i in seq_along(textural_classes)) {
+    input_df_texture <- input_df[input_df$textural_class==textural_classes[i],]
+    for (j in 2:13) {
+      final_df_texture <- input_df_texture[!is.na(input_df_texture[,colnames(median_soils)[j]]),]
+      crit_vals <- quantile(final_df_texture[,colnames(median_soils)[j]], probs = c(0.15,0.5,0.85))
+      min_Q15 <- min(abs(final_df_texture[,colnames(Q15_soils)[j]] - crit_vals[1]))
+      min_median <- min(abs(final_df_texture[,colnames(median_soils)[j]] - crit_vals[2]))
+      min_Q85 <- min(abs(final_df_texture[,colnames(Q85_soils)[j]] - crit_vals[3]))
+      if(length(final_df_texture$cokey[which(final_df_texture[,colnames(Q15_soils)[j]]==crit_vals[1])])==0) {
+        Q15_soils[i,j] <- paste(final_df_texture$cokey[which(abs(final_df_texture[,colnames(Q15_soils)[j]] - crit_vals[1])==min_Q15)], collapse = ',')
+      } else {
+        Q15_soils[i,j] <- paste(final_df_texture$cokey[which(final_df_texture[,colnames(Q15_soils)[j]]==crit_vals[1])], collapse = ',')
+        }
+      if (length(final_df_texture$cokey[which(final_df_texture[,colnames(median_soils)[j]]==crit_vals[2])])==0) {
+        median_soils[i,j] <- paste(final_df_texture$cokey[which(abs(final_df_texture[,colnames(median_soils)[j]] - crit_vals[2])==min_median)], collapse = ',')
+      } else {
+        median_soils[i,j] <- paste(final_df_texture$cokey[which(final_df_texture[,colnames(median_soils)[j]]==crit_vals[2])], collapse = ',')
+      }
+      if (length(final_df_texture$cokey[which(final_df_texture[,colnames(Q85_soils)[j]]==crit_vals[3])])==0) {
+        Q85_soils[i,j] <- paste(final_df_texture$cokey[which(abs(final_df_texture[,colnames(Q85_soils)[j]] - crit_vals[3])==min_Q85)], collapse = ',')
+      } else {
+        Q85_soils[i,j] <- paste(final_df_texture$cokey[which(final_df_texture[,colnames(Q85_soils)[j]]==crit_vals[3])], collapse = ',')
+      }
+    }
+  }
+  list(Q15=Q15_soils, median=median_soils, Q85=Q85_soils)
+}
+soils_130212_quantiles <- identify_soil(soils_130212_results)
+
+soils_130212_quantiles$Q15[which(textural_classes=='silty clay'),]
+identify_most_common <- function(texture, df, q) {
+  test <- paste(df[[q]][which(textural_classes==texture),2:13], collapse = ',')
+  test <- unlist(strsplit(test, ','))
+  test <- test[test != '']
+  table(test)[order(table(test))]
+}
+
+identify_most_common('loamy sand', soils_130212_quantiles, 'Q15')
+textural_classes
+lapply(textural_classes, function(x) identify_most_common(x, soils_130212_quantiles, 'Q15'))
+lapply(textural_classes, function(x) identify_most_common(x, soils_130212_quantiles, 'median'))
+lapply(textural_classes, function(x) identify_most_common(x, soils_130212_quantiles, 'Q85'))
+soils_130212_quantiles$Q15[3,]
+
+#read in soil profile data
+#read in soil data
+mod_database <- read.csv(file.path(workDir, 'modelling_database.csv'), stringsAsFactors = FALSE, na.strings = '-9.9')
+mod_database <- mod_database[which(mod_database$hzn_top<200),] #delete horizons that start at or below 200 cm depth
+mod_database <- mod_database[mod_database$cokey %in% soil_df$cokey,]
+length(unique(mod_database$cokey)) #2911
+mod_database <- mod_database[!mod_database$hzn_desgn %in% c('H', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6'),] #only leaves 981
+unique(mod_database$hzn_desgn)[grepl('t', unique(mod_database$hzn_desgn))] #"Ct"          "Crt"
+
+soils_130212_results_hzn_desgn <- soils_130212_results[soils_130212_results$cokey %in% mod_database$cokey,] 
+dim(soils_130212_results_hzn_desgn)
+table(soils_130212_results_hzn_desgn$textural_class)
+
+
+t_horizons_by_cokey <- function(cokey) {
+  soil <- mod_database[mod_database$cokey==cokey,]
+  hzn_desgns <- soil$hzn_desgn
+  hzn_desgns <- hzn_desgns[hzn_desgns != 'C1 to C4']
+  hzn_desgns <- hzn_desgns[hzn_desgns != 'Ct']
+  hzn_desgns <- hzn_desgns[hzn_desgns != 'Crt']
+  hzn_desgns <- hzn_desgns[hzn_desgns != 'R2t']
+  # print(hzn_desgns)
+  sum(grepl('t', hzn_desgns)) > 0
+}
+
+t_horizons_by_cokey(soils_130212_results_hzn_desgn$cokey[5])
+soils_130212_results_hzn_desgn$t_horizon <- sapply(soils_130212_results_hzn_desgn$cokey, t_horizons_by_cokey)
+tapply(soils_130212_results_hzn_desgn$fd_2005.02.15[soils_130212_results_hzn_desgn$textural_class=='loam'], soils_130212_results_hzn_desgn$t_horizon[soils_130212_results_hzn_desgn$textural_class=='loam'], summary)
+tapply(soils_130212_results_hzn_desgn$fd_2005.02.15[soils_130212_results_hzn_desgn$textural_class=='silt loam'], soils_130212_results_hzn_desgn$t_horizon[soils_130212_results_hzn_desgn$textural_class=='silt loam'], summary)
+tapply(soils_130212_results_hzn_desgn$fd_2005.02.15[soils_130212_results_hzn_desgn$textural_class=='sandy loam'], soils_130212_results_hzn_desgn$t_horizon[soils_130212_results_hzn_desgn$textural_class=='sandy loam'], summary)
+tapply(soils_130212_results_hzn_desgn$fd_2005.02.15[soils_130212_results_hzn_desgn$textural_class=='loamy sand'], soils_130212_results_hzn_desgn$t_horizon[soils_130212_results_hzn_desgn$textural_class=='loamy sand'], summary)
+tapply(soils_130212_results_hzn_desgn$fd_2005.02.15[soils_130212_results_hzn_desgn$textural_class=='sand'], soils_130212_results_hzn_desgn$t_horizon[soils_130212_results_hzn_desgn$textural_class=='sand'], summary)
+
+
