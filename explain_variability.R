@@ -50,6 +50,9 @@ exploratory_analysis(df = soils_130212_results, varname = 'ksat_10cm', result = 
 exploratory_analysis(df = soils_130212_results, varname = 'theta_s_10cm', result = 'fd_2009.02.15')
 exploratory_analysis(df = soils_130212_results, varname = 'theta_r_10cm', result = 'fd_2009.02.15')
 exploratory_analysis(df = soils_130212_results, varname = 'alpha_10cm', result = 'fd_2009.02.15')
+plot(soils_130212_results$alpha_10cm, soils_130212_results$fd_2009.02.15)
+plot(soils_130212_results$alpha_10cm, soils_130212_results$sand_10cm)
+plot(soils_130212_results$alpha_10cm, soils_130212_results$theta_0.33b_10cm)
 exploratory_analysis(df = soils_130212_results, varname = 'alpha_10cm', result = 'theta_0.33b_10cm')
 exploratory_analysis(df = soils_130212_results, varname = 'alpha_10cm', result = 'h_fc_10cm')
 exploratory_analysis(df = soils_130212_results, varname = 'n_10cm', result = 'fd_2009.02.15')
@@ -76,9 +79,9 @@ soils_130212_results$cokey[which(soils_130212_results$textural_class=='silty loa
 soils_130212_results[soils_130212_results$cokey==10679673,]
 soils_130212_results[soils_130212_results$fd_2005.02.15==7.7 & soils_130212_results$textural_class=='loamy sand',]
 
-i <- 9
-input_df <- soils_130212_results
-j <- 2
+# i <- 9
+# input_df <- soils_130212_results
+# j <- 2
 identify_soil <- function(input_df) {
   for (i in seq_along(textural_classes)) {
     input_df_texture <- input_df[input_df$textural_class==textural_classes[i],]
@@ -130,13 +133,27 @@ mod_database <- read.csv(file.path(workDir, 'modelling_database.csv'), stringsAs
 mod_database <- mod_database[which(mod_database$hzn_top<200),] #delete horizons that start at or below 200 cm depth
 mod_database <- mod_database[mod_database$cokey %in% soil_df$cokey,]
 length(unique(mod_database$cokey)) #2911
-mod_database <- mod_database[!mod_database$hzn_desgn %in% c('H', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6'),] #only leaves 981
-unique(mod_database$hzn_desgn)[grepl('t', unique(mod_database$hzn_desgn))] #"Ct"          "Crt"
+mod_database_hzn_des <- mod_database[!mod_database$hzn_desgn %in% c('H', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6'),] 
+length(unique(mod_database_hzn_des$cokey)) #only leaves 981
+unique(mod_database_hzn_des$hzn_desgn)[grepl('t', unique(mod_database$hzn_desgn))] #"Ct"          "Crt"
 
-soils_130212_results_hzn_desgn <- soils_130212_results[soils_130212_results$cokey %in% mod_database$cokey,] 
+soils_130212_results_hzn_desgn <- soils_130212_results[soils_130212_results$cokey %in% mod_database_hzn_des$cokey,]
 dim(soils_130212_results_hzn_desgn)
 table(soils_130212_results_hzn_desgn$textural_class)
 
+property_by_cokey <- function(cokey, property) {
+  soil <- mod_database[mod_database$cokey==cokey,]
+  soil <- soil[!is.na(soil[[property]]),]
+  profile_depth <- max(soil$hzn_bot) - min(soil$hzn_top)
+  soil$hzn_thickness <- soil$hzn_bot - soil$hzn_top
+  soil$wtd.factor <- soil$hzn_thickness/profile_depth
+  sum(soil$wtd.factor * soil[[property]])
+}
+mod_database[mod_database$cokey==soils_130212_results$cokey[9],]
+property_by_cokey(2691, 'Ks..cm.d.')
+property_by_cokey(2691, 'clay')
+#check clay
+8.6*(25/153) + 31.3*(36/153) + 23.1*(36/153) + 13.9*(55/153) + 9.6*(1/153) #19.26471
 
 t_horizons_by_cokey <- function(cokey) {
   soil <- mod_database[mod_database$cokey==cokey,]
@@ -149,12 +166,115 @@ t_horizons_by_cokey <- function(cokey) {
   sum(grepl('t', hzn_desgns)) > 0
 }
 
+
+t_horizon_depth_by_cokey <- function(cokey) {
+  soil <- mod_database[mod_database$cokey==cokey,]
+  hzn_desgns <- soil[,c('hzn_desgn', 'hzn_top', 'hzn_bot')]
+  hzn_desgns <- hzn_desgns[hzn_desgns$hzn_desgn != 'C1 to C4',]
+  hzn_desgns <- hzn_desgns[hzn_desgns$hzn_desgn != 'Ct',]
+  hzn_desgns <- hzn_desgns[hzn_desgns$hzn_desgn != 'Crt',]
+  hzn_desgns <- hzn_desgns[hzn_desgns$hzn_desgn != 'R2t',]
+  if(sum(grepl('t', hzn_desgns$hzn_desgn)) > 0) {
+    hzn_desgns <- hzn_desgns[grepl('t', hzn_desgns$hzn_desgn),]
+    min(hzn_desgns$hzn_top)
+  } else {NA}
+}
+
+mod_database[mod_database$cokey==soils_130212_results_hzn_desgn$cokey[5],]
 t_horizons_by_cokey(soils_130212_results_hzn_desgn$cokey[5])
+t_horizon_depth_by_cokey(soils_130212_results_hzn_desgn$cokey[5])
+soils_130212_results_hzn_desgn[5,]
 soils_130212_results_hzn_desgn$t_horizon <- sapply(soils_130212_results_hzn_desgn$cokey, t_horizons_by_cokey)
-tapply(soils_130212_results_hzn_desgn$fd_2005.02.15[soils_130212_results_hzn_desgn$textural_class=='loam'], soils_130212_results_hzn_desgn$t_horizon[soils_130212_results_hzn_desgn$textural_class=='loam'], summary)
-tapply(soils_130212_results_hzn_desgn$fd_2005.02.15[soils_130212_results_hzn_desgn$textural_class=='silt loam'], soils_130212_results_hzn_desgn$t_horizon[soils_130212_results_hzn_desgn$textural_class=='silt loam'], summary)
-tapply(soils_130212_results_hzn_desgn$fd_2005.02.15[soils_130212_results_hzn_desgn$textural_class=='sandy loam'], soils_130212_results_hzn_desgn$t_horizon[soils_130212_results_hzn_desgn$textural_class=='sandy loam'], summary)
-tapply(soils_130212_results_hzn_desgn$fd_2005.02.15[soils_130212_results_hzn_desgn$textural_class=='loamy sand'], soils_130212_results_hzn_desgn$t_horizon[soils_130212_results_hzn_desgn$textural_class=='loamy sand'], summary)
+soils_130212_results_hzn_desgn$t_horizon_depth <- sapply(soils_130212_results_hzn_desgn$cokey, t_horizon_depth_by_cokey)
+tapply(soils_130212_results_hzn_desgn$t_horizon, soils_130212_results_hzn_desgn$textural_class, table)
+
+#compare stats by textural class and presence of Bt
+tapply(soils_130212_results_hzn_desgn$fd_2005.02.15[soils_130212_results_hzn_desgn$textural_class=='loamy sand'], soils_130212_results_hzn_desgn$t_horizon[soils_130212_results_hzn_desgn$textural_class=='loamy sand'], summary) #median is 1 day slower; mean is 1.5 days lower
+
+tapply(soils_130212_results_hzn_desgn$fd_2005.02.15[soils_130212_results_hzn_desgn$textural_class=='sandy loam'], soils_130212_results_hzn_desgn$t_horizon[soils_130212_results_hzn_desgn$textural_class=='sandy loam'], summary) #mean is 1 day slower; median 0.5 day slower
+
+tapply(soils_130212_results_hzn_desgn$fd_2005.02.15[soils_130212_results_hzn_desgn$textural_class=='loam'], soils_130212_results_hzn_desgn$t_horizon[soils_130212_results_hzn_desgn$textural_class=='loam'], summary) #practically the same
+
+tapply(soils_130212_results_hzn_desgn$fd_2005.02.15[soils_130212_results_hzn_desgn$textural_class=='silt loam'], soils_130212_results_hzn_desgn$t_horizon[soils_130212_results_hzn_desgn$textural_class=='silt loam'], summary) #mean is 5 days slower; median 11 days slower
+
+tapply(soils_130212_results_hzn_desgn$fd_2005.02.15[soils_130212_results_hzn_desgn$textural_class=='clay loam'], soils_130212_results_hzn_desgn$t_horizon[soils_130212_results_hzn_desgn$textural_class=='clay loam'], summary) #median 0.4 day faster; mean is 0.5 day slower
+
+tapply(soils_130212_results_hzn_desgn$fd_2005.02.15[soils_130212_results_hzn_desgn$textural_class=='silty clay loam'], soils_130212_results_hzn_desgn$t_horizon[soils_130212_results_hzn_desgn$textural_class=='silty clay loam'], summary) #median is 5 days faster; mean is 7 days faster
+
+tapply(soils_130212_results_hzn_desgn$fd_2005.02.15[soils_130212_results_hzn_desgn$textural_class=='sandy clay loam'], soils_130212_results_hzn_desgn$t_horizon[soils_130212_results_hzn_desgn$textural_class=='sandy clay loam'], summary)
+
+tapply(soils_130212_results_hzn_desgn$fd_2005.02.15[soils_130212_results_hzn_desgn$textural_class=='clay'], soils_130212_results_hzn_desgn$t_horizon[soils_130212_results_hzn_desgn$textural_class=='clay'], summary)
+
 tapply(soils_130212_results_hzn_desgn$fd_2005.02.15[soils_130212_results_hzn_desgn$textural_class=='sand'], soils_130212_results_hzn_desgn$t_horizon[soils_130212_results_hzn_desgn$textural_class=='sand'], summary)
 
+#now do same but with loams but with reference to where Bt horizon starts
+hist(soils_130212_results_hzn_desgn$t_horizon_depth)
+hist(soils_130212_results_hzn_desgn$t_horizon_depth[soils_130212_results_hzn_desgn$textural_class=='loam'])
+summary(soils_130212_results_hzn_desgn$fd_2009.02.15[which(soils_130212_results_hzn_desgn$textural_class=='loam' & soils_130212_results_hzn_desgn$t_horizon_depth<=10)])
+summary(soils_130212_results_hzn_desgn$fd_2009.02.15[which(soils_130212_results_hzn_desgn$textural_class=='loam' & soils_130212_results_hzn_desgn$t_horizon_depth>10 & soils_130212_results_hzn_desgn$t_horizon_depth<=30)])
+summary(soils_130212_results_hzn_desgn$fd_2009.02.15[which(soils_130212_results_hzn_desgn$textural_class=='loam' & soils_130212_results_hzn_desgn$t_horizon_depth>30)])
+summary(soils_130212_results_hzn_desgn$fd_2009.02.15[which(soils_130212_results_hzn_desgn$textural_class=='loam' & is.na(soils_130212_results_hzn_desgn$t_horizon_depth))])
 
+length(which(soils_130212_results_hzn_desgn$textural_class=='loam' & soils_130212_results_hzn_desgn$t_horizon_depth<=10)) #27
+length(which(soils_130212_results_hzn_desgn$textural_class=='loam' & soils_130212_results_hzn_desgn$t_horizon_depth>10&soils_130212_results_hzn_desgn$t_horizon_depth<=30)) #71
+length(which(soils_130212_results_hzn_desgn$textural_class=='loam' & soils_130212_results_hzn_desgn$t_horizon_depth>30))#51
+length(which(soils_130212_results_hzn_desgn$textural_class=='loam' & is.na(soils_130212_results_hzn_desgn$t_horizon_depth))) #135
+    
+#and with sandy loam
+hist(soils_130212_results_hzn_desgn$t_horizon_depth[soils_130212_results_hzn_desgn$textural_class=='sandy loam'])
+summary(soils_130212_results_hzn_desgn$fd_2009.02.15[which(soils_130212_results_hzn_desgn$textural_class=='sandy loam' & soils_130212_results_hzn_desgn$t_horizon_depth<=10)])
+summary(soils_130212_results_hzn_desgn$fd_2009.02.15[which(soils_130212_results_hzn_desgn$textural_class=='sandy loam' & soils_130212_results_hzn_desgn$t_horizon_depth>10 & soils_130212_results_hzn_desgn$t_horizon_depth<=30)])
+summary(soils_130212_results_hzn_desgn$fd_2009.02.15[which(soils_130212_results_hzn_desgn$textural_class=='sandy loam' & soils_130212_results_hzn_desgn$t_horizon_depth>30)])
+summary(soils_130212_results_hzn_desgn$fd_2009.02.15[which(soils_130212_results_hzn_desgn$textural_class=='sandy loam' & is.na(soils_130212_results_hzn_desgn$t_horizon_depth))])
+
+length(which(soils_130212_results_hzn_desgn$textural_class=='sandy loam' & soils_130212_results_hzn_desgn$t_horizon_depth<=10)) #10
+length(which(soils_130212_results_hzn_desgn$textural_class=='sandy loam' & soils_130212_results_hzn_desgn$t_horizon_depth>10&soils_130212_results_hzn_desgn$t_horizon_depth<=30)) #56
+length(which(soils_130212_results_hzn_desgn$textural_class=='sandy loam' & soils_130212_results_hzn_desgn$t_horizon_depth>30))#68
+length(which(soils_130212_results_hzn_desgn$textural_class=='sandy loam' & is.na(soils_130212_results_hzn_desgn$t_horizon_depth))) #198
+
+#and clay loam
+hist(soils_130212_results_hzn_desgn$t_horizon_depth[soils_130212_results_hzn_desgn$textural_class=='clay loam'])
+summary(soils_130212_results_hzn_desgn$fd_2009.02.15[which(soils_130212_results_hzn_desgn$textural_class=='clay loam' & soils_130212_results_hzn_desgn$t_horizon_depth<=10)])
+summary(soils_130212_results_hzn_desgn$fd_2009.02.15[which(soils_130212_results_hzn_desgn$textural_class=='clay loam' & soils_130212_results_hzn_desgn$t_horizon_depth>10 & soils_130212_results_hzn_desgn$t_horizon_depth<=30)])
+summary(soils_130212_results_hzn_desgn$fd_2009.02.15[which(soils_130212_results_hzn_desgn$textural_class=='clay loam' & soils_130212_results_hzn_desgn$t_horizon_depth>30)])
+summary(soils_130212_results_hzn_desgn$fd_2009.02.15[which(soils_130212_results_hzn_desgn$textural_class=='clay loam' & is.na(soils_130212_results_hzn_desgn$t_horizon_depth))])
+
+length(which(soils_130212_results_hzn_desgn$textural_class=='clay loam' & soils_130212_results_hzn_desgn$t_horizon_depth<=10)) #5
+length(which(soils_130212_results_hzn_desgn$textural_class=='clay loam' & soils_130212_results_hzn_desgn$t_horizon_depth>10&soils_130212_results_hzn_desgn$t_horizon_depth<=30)) #12
+length(which(soils_130212_results_hzn_desgn$textural_class=='clay loam' & soils_130212_results_hzn_desgn$t_horizon_depth>30))#5
+length(which(soils_130212_results_hzn_desgn$textural_class=='clay loam' & is.na(soils_130212_results_hzn_desgn$t_horizon_depth))) #45
+
+#and silt loam
+hist(soils_130212_results_hzn_desgn$t_horizon_depth[soils_130212_results_hzn_desgn$textural_class=='silt loam'])
+summary(soils_130212_results_hzn_desgn$fd_2009.02.15[which(soils_130212_results_hzn_desgn$textural_class=='silt loam' & soils_130212_results_hzn_desgn$t_horizon_depth<=10)])
+summary(soils_130212_results_hzn_desgn$fd_2009.02.15[which(soils_130212_results_hzn_desgn$textural_class=='silt loam' & soils_130212_results_hzn_desgn$t_horizon_depth>10 & soils_130212_results_hzn_desgn$t_horizon_depth<=30)])
+summary(soils_130212_results_hzn_desgn$fd_2009.02.15[which(soils_130212_results_hzn_desgn$textural_class=='silt loam' & soils_130212_results_hzn_desgn$t_horizon_depth>30)])
+summary(soils_130212_results_hzn_desgn$fd_2009.02.15[which(soils_130212_results_hzn_desgn$textural_class=='silt loam' & is.na(soils_130212_results_hzn_desgn$t_horizon_depth))])
+
+length(which(soils_130212_results_hzn_desgn$textural_class=='silt loam' & soils_130212_results_hzn_desgn$t_horizon_depth<=10)) #3
+length(which(soils_130212_results_hzn_desgn$textural_class=='silt loam' & soils_130212_results_hzn_desgn$t_horizon_depth>10&soils_130212_results_hzn_desgn$t_horizon_depth<=30)) #3
+length(which(soils_130212_results_hzn_desgn$textural_class=='silt loam' & soils_130212_results_hzn_desgn$t_horizon_depth>30))#9
+length(which(soils_130212_results_hzn_desgn$textural_class=='silt loam' & is.na(soils_130212_results_hzn_desgn$t_horizon_depth))) #33
+
+#compare stats with profile weighted ksat and clay
+soils_130212_results$clay_profile <- sapply(soils_130212_results$cokey, property_by_cokey, property='clay')
+soils_130212_results$silt_profile <- sapply(soils_130212_results$cokey, property_by_cokey, property='silt')
+soils_130212_results$sand_profile <- sapply(soils_130212_results$cokey, property_by_cokey, property='sand')
+soils_130212_results$ksat_profile <- sapply(soils_130212_results$cokey, property_by_cokey, property='Ks..cm.d.')
+summary(soils_130212_results$clay_profile)
+summary(soils_130212_results$ksat_profile)
+
+#clay
+plot(soils_130212_results$clay_10cm, soils_130212_results$clay_profile)
+plot(soils_130212_results$clay_10cm, soils_130212_results$fd_2009.02.15)
+plot(soils_130212_results$clay_profile, soils_130212_results$fd_2009.02.15)
+
+#sand
+plot(soils_130212_results$sand_10cm, soils_130212_results$sand_profile)
+plot(soils_130212_results$sand_10cm, soils_130212_results$fd_2009.02.15)
+plot(soils_130212_results$sand_profile, soils_130212_results$fd_2009.02.15)
+
+#ksat
+plot(log(soils_130212_results$ksat_10cm), log(soils_130212_results$ksat_profile))
+plot(log(soils_130212_results$ksat_10cm), soils_130212_results$fd_2009.02.15)
+plot(log(soils_130212_results$ksat_profile), soils_130212_results$fd_2009.02.15)
