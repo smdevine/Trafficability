@@ -314,6 +314,10 @@ unique(comp_AOI_10cm$textural_class)
 table(comp_AOI_10cm$textural_class)
 write.csv(comp_AOI_10cm, file.path(trafficDir, 'ssurgo_intermediates', 'comp_AOI_10cm_2.9.21.csv'), row.names = FALSE)
 
+comp_AOI_10cm <- read.csv(file.path(trafficDir, 'ssurgo_intermediates', 'comp_AOI_10cm_2.9.21.csv'))
+colnames(comp_AOI_10cm)
+length(unique(comp_AOI_10cm$mukey[!is.na(comp_AOI_10cm$clay_10cm)]))#8363 unique mukeys with components having at least texture data
+length(unique(comp_AOI_10cm$cokey[!is.na(comp_AOI_10cm$clay_10cm)])) #10224
 
 
 #add metadata and restrictive layer info to shapefile
@@ -466,6 +470,8 @@ AOI_10cm_muagg$textural_class <- textural.class.calc(sand = AOI_10cm_muagg$sand_
 table(AOI_10cm_muagg$textural_class)
 write.csv(AOI_10cm_muagg, file.path(trafficDir, 'ssurgo_intermediates', 'AOI_10cm_muagg.csv'), row.names = FALSE)
 colnames(AOI_10cm_muagg)
+AOI_10cm_muagg <- read.csv(file.path(trafficDir, 'ssurgo_intermediates', 'AOI_10cm_muagg.csv'))
+length(unique(AOI_10cm_muagg$mukey)) #8560 unique mukeys
 
 mu_sagbi_10cm <- merge(mu_sagbi, AOI_10cm_muagg, by = 'mukey')
 names(mu_sagbi_10cm)
