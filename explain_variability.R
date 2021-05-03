@@ -128,8 +128,8 @@ identify_most_common <- function(texture, df, q) {
 }
 
 textural_classes
-check <- 'clay'
-test <- identify_most_common(check, soils_130212_quantiles, 'Q85')
+check <- 'silty clay'
+test <- identify_most_common(check, soils_130212_quantiles, 'median')
 test <- as.data.frame(test)
 colnames(test) <- c('cokey', 'freq')
 test$cokey <- as.integer(as.character(test$cokey))
@@ -138,7 +138,7 @@ head(test, 10)
 test[which(test$cokey %in% mod_database_hzn_des$cokey),]
 test2 <- head(which(test$cokey %in% mod_database_hzn_des$cokey), 10)
 test3 <- test2[1] #2,3,4 ok
-test3 <- 1
+# test3 <- 1
 mod_database_hzn_des[test$cokey[test3] == mod_database_hzn_des$cokey,]
 mod_database[test$cokey[test3] == mod_database$cokey,]
 cell_130212_results$fd_2009.01.15[cell_130212_results$cokey==test$cokey[test3]]
