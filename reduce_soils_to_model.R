@@ -366,3 +366,7 @@ dim(soils_modeled_10cm_revised_QC) #2920
 soils_modeled_10cm_revised_QC <- soils_modeled_10cm_revised_QC[!is.na(soils_modeled_10cm_revised_QC$result_opt2),]
 dim(soils_modeled_10cm_revised_QC) #2911
 write.csv(soils_modeled_10cm_revised_QC, file.path(tablesDir, 'reduce_soils', 'soils_modeled_revised_QCpass_Oct2020.csv'), row.names = FALSE)
+
+soils_df <- read.csv(file.path(tablesDir, 'reduce_soils', 'soils_modeled_revised_QCpass_Oct2020.csv'), stringsAsFactors = FALSE)
+ksat_df <- read.csv(file.path(workDir, '4.ksat_data.csv'), stringsAsFactors = FALSE)
+soils_df$ksat_ssurgo
