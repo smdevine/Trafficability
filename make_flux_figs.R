@@ -2,6 +2,12 @@
 #check silt loam median profile
 #check silty clay median profile
 #get April 2009 results as example
+library(extrafont)
+library(extrafontdb)
+font_import() #only needs to be done one time after updating and re-installing R and moving and updating packages
+
+loadfonts(device = 'win')
+FiguresDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/Figures'
 resultsDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/climate_runs/typical profiles/cell_181807_2009-02-15'
 trafficDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/climate_run_summaries/by_cell/'
 soilsDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/soils_of_interest'
@@ -81,7 +87,9 @@ results_files[[8]][ ,c('time_days', 'flux_0cm', 'flux_10cm', 'flux_30cm', 'net_f
 soilsDF[soilsDF$cokey==texture_colors$median_cokeys[8],]
 
 #plot vwc drawdown
-plot(results_files[[1]]$time_days, results_files[[1]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[1]/255, texture_colors$green[1]/255, texture_colors$blue[1]/255), ylim=c(0,0.5), xlim = c(0,30), ylab=expression('0-10 cm water content (cm H'[2]*'O cm soil'^-1*')'), xlab = 'Days post-flooding')
+jpeg(file = file.path(FiguresDir, '0_10cm_absdrawdown_cell_181807_2009-02-15.jpg'), family = 'Times New Roman', width = 6, height = 4, pointsize = 12, units = 'in', res=800)
+par(mar=c(4.25,4.25,0.5,0.5))
+plot(results_files[[1]]$time_days, results_files[[1]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[1]/255, texture_colors$green[1]/255, texture_colors$blue[1]/255), ylim=c(0.08,0.48), xlim = c(0,30), ylab=expression('0-10 cm water content (cm H'[2]*'O cm soil'^-1*')'), xlab = 'Days post-flooding')
 lines(results_files[[2]]$time_days, results_files[[2]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[2]/255, texture_colors$green[2]/255, texture_colors$blue[2]/255))
 lines(results_files[[3]]$time_days, results_files[[3]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[3]/255, texture_colors$green[3]/255, texture_colors$blue[3]/255))
 lines(results_files[[4]]$time_days, results_files[[4]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[4]/255, texture_colors$green[4]/255, texture_colors$blue[4]/255))
@@ -91,9 +99,13 @@ lines(results_files[[7]]$time_days, results_files[[7]]$theta_0_10cm_avg, type = 
 lines(results_files[[8]]$time_days, results_files[[8]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[8]/255, texture_colors$green[8]/255, texture_colors$blue[8]/255))
 lines(results_files[[9]]$time_days, results_files[[9]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[9]/255, texture_colors$green[9]/255, texture_colors$blue[9]/255))
 lines(results_files[[10]]$time_days, results_files[[10]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[10]/255, texture_colors$green[10]/255, texture_colors$blue[10]/255))
+legend('topright', legend=texture_colors$textures, col=rgb(red=texture_colors$red/255, green = texture_colors$green/255, blue = texture_colors$blue/255), lty=1, lwd=1.5, ncol=2)
+dev.off()
 
 #plot 0-10 cm relative water content
-plot(results_files[[1]]$time_days, results_files[[1]]$theta_0_10cm_rel, type = 'l', col=rgb(texture_colors$red[1]/255, texture_colors$green[1]/255, texture_colors$blue[1]/255), ylim=c(0.6,1.9), xlim = c(0,30), ylab='0-10 cm water content (fraction of field capacity)', xlab = 'Days post-flooding mid-February')
+jpeg(file = file.path(FiguresDir, '0_10cm_reldrawdown_cell_181807_2009-02-15.jpg'), family = 'Times New Roman', width = 6, height = 4, pointsize = 12, units = 'in', res=800)
+par(mar=c(4,4,0.5,0.5))
+plot(results_files[[1]]$time_days, results_files[[1]]$theta_0_10cm_rel, type = 'l', col=rgb(texture_colors$red[1]/255, texture_colors$green[1]/255, texture_colors$blue[1]/255), ylim=c(0.6,1.9), xlim = c(0,30), ylab='0-10 cm water content (FC fraction)', xlab = 'Days post-flooding mid-February')
 lines(results_files[[2]]$time_days, results_files[[2]]$theta_0_10cm_rel, type = 'l', col=rgb(texture_colors$red[2]/255, texture_colors$green[2]/255, texture_colors$blue[2]/255))
 lines(results_files[[3]]$time_days, results_files[[3]]$theta_0_10cm_rel, type = 'l', col=rgb(texture_colors$red[3]/255, texture_colors$green[3]/255, texture_colors$blue[3]/255))
 lines(results_files[[4]]$time_days, results_files[[4]]$theta_0_10cm_rel, type = 'l', col=rgb(texture_colors$red[4]/255, texture_colors$green[4]/255, texture_colors$blue[4]/255))
@@ -107,6 +119,7 @@ abline(h=1, lty=2)
 abline(h=0.9, lty=2)
 abline(h=0.8, lty=2)
 legend('topright', legend=texture_colors$textures, col=rgb(red=texture_colors$red/255, green = texture_colors$green/255, blue = texture_colors$blue/255), lty=1, lwd=1.5, ncol=2)
+dev.off()
 
 #plot 0-10 cm net daily flux
 plot(results_files[[1]]$time_days, results_files[[1]]$net_flux_0_10cm, type = 'l', col=rgb(texture_colors$red[1]/255, texture_colors$green[1]/255, texture_colors$blue[1]/255), ylim=c(0,0.5), xlim = c(0,30), ylab=expression('0-10 cm net water flux (cm H'[2]*'O day'^-1*')'), xlab = 'Days post-flooding')
