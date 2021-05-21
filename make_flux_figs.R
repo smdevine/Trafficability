@@ -4,12 +4,11 @@
 #get April 2009 results as example
 library(extrafont)
 library(extrafontdb)
-font_import() #only needs to be done one time after updating and re-installing R and moving and updating packages
-
+# font_import() #only needs to be done one time after updating and re-installing R and moving and updating packages
 loadfonts(device = 'win')
 FiguresDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/Figures'
-resultsDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/climate_runs/typical profiles/cell_181807_2009-02-15'
-trafficDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/climate_run_summaries/by_cell/'
+FebResultsDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/climate_runs/typical profiles/cell_181807_2009-02-15'
+trafficDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/climate_run_summaries_final/by_cell/'
 soilsDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/soils_of_interest'
 textures <- c('clay', 'silty clay' , 'silty clay loam', 'clay loam', 'silt loam', 'sandy clay loam', 'loam', 'sandy loam', 'loamy sand', 'sand')
 texture_colors <- data.frame(textures=c('clay', 'silty clay' , 'silty clay loam', 'clay loam', 'silt loam', 'sandy clay loam', 'loam', 'sandy loam', 'loamy sand', 'sand'), texture_labs=c('clay', 'silty\nclay' , 'silty\nclay\nloam', 'clay\nloam', 'silt\nloam', 'sandy\nclay\nloam', 'loam', 'sandy\nloam', 'loamy\nsand', 'sand'), red=c(169, 0, 0, 223, 0, 170, 255, 230, 115, 255), green=c(0, 112, 197, 115, 168, 255, 0, 152, 76, 255), blue=c(230, 255, 255, 255, 132, 0, 0, 0, 0, 0), median_cokeys=c(11694392, 11681, 12763923, 11731790, 12769121, 11693996, 11855610, 11834554, 12350998, 10807468), stringsAsFactors = FALSE)
@@ -17,10 +16,10 @@ soilsDF <- read.csv(file.path(soilsDir, 'soils_modeled_revised_QCpass_Oct2020.cs
 trafficDF <- read.csv(file.path(trafficDir, 'cell_181807_results.csv'), stringsAsFactors = FALSE)
 trafficDF[trafficDF$cokey==11855610,]
 
-read_in_flux_files <- function(texture) {
+read_in_flux_files <- function(texture, directory) {
   subDir <- texture
-  f_path <- list.dirs(file.path(resultsDir, subDir), recursive = FALSE, full.names = FALSE)
-  obs <- read.table(file.path(resultsDir, subDir, f_path, f_path, 'Obs_Node.out'), col.names = c('time_days', 'h_0cm', 'theta_0cm', 'flux_0cm', 'h_1cm', 'theta_1cm', 'flux_1cm', 'h_2cm', 'theta_2cm', 'flux_2cm', 'h_3cm', 'theta_3cm', 'flux_3cm', 'h_4cm', 'theta_4cm', 'flux_4cm', 'h_5cm', 'theta_5cm', 'flux_5cm', 'h_6cm', 'theta_6cm', 'flux_6cm', 'h_7cm', 'theta_7cm', 'flux_7cm', 'h_8cm', 'theta_8cm', 'flux_8cm', 'h_9cm', 'theta_9cm', 'flux_9cm', 'h_10cm', 'theta_10cm', 'flux_10cm', 'h_15cm', 'theta_15cm', 'flux_15cm', 'h_20cm', 'theta_20cm', 'flux_20cm', 'h_30cm', 'theta_30cm', 'flux_30cm', 'h_50cm', 'theta_50cm', 'flux_50cm'), header = FALSE, nrow=948, skip=11)
+  f_path <- list.dirs(file.path(directory, subDir), recursive = FALSE, full.names = FALSE)
+  obs <- read.table(file.path(directory, subDir, f_path, f_path, 'Obs_Node.out'), col.names = c('time_days', 'h_0cm', 'theta_0cm', 'flux_0cm', 'h_1cm', 'theta_1cm', 'flux_1cm', 'h_2cm', 'theta_2cm', 'flux_2cm', 'h_3cm', 'theta_3cm', 'flux_3cm', 'h_4cm', 'theta_4cm', 'flux_4cm', 'h_5cm', 'theta_5cm', 'flux_5cm', 'h_6cm', 'theta_6cm', 'flux_6cm', 'h_7cm', 'theta_7cm', 'flux_7cm', 'h_8cm', 'theta_8cm', 'flux_8cm', 'h_9cm', 'theta_9cm', 'flux_9cm', 'h_10cm', 'theta_10cm', 'flux_10cm', 'h_15cm', 'theta_15cm', 'flux_15cm', 'h_20cm', 'theta_20cm', 'flux_20cm', 'h_30cm', 'theta_30cm', 'flux_30cm', 'h_50cm', 'theta_50cm', 'flux_50cm'), header = FALSE, nrow=948, skip=11)
   obs$theta_0_10cm_avg <- apply(obs[,c(3,6,9,12,15,18,21,24,27,30,33)], 1, mean)
   obs <- obs[2:nrow(obs),] #ignore time 0.001 when flooding starts
   obs$time_days <- obs$time_days - 5 #time 0 means when flooding ends
@@ -34,7 +33,7 @@ read_in_flux_files <- function(texture) {
   obs$theta_0_10cm_rel <- obs$theta_0_10cm_avg / theta_fc
   obs
 }
-results_files <- lapply(textures, read_in_flux_files)
+results_files <- lapply(textures, read_in_flux_files, directory=FebResultsDir)
 # summary(obs$flux_0cm)
 head(results_files[[1]], 10)
 
@@ -87,7 +86,7 @@ results_files[[8]][ ,c('time_days', 'flux_0cm', 'flux_10cm', 'flux_30cm', 'net_f
 soilsDF[soilsDF$cokey==texture_colors$median_cokeys[8],]
 
 #plot vwc drawdown
-jpeg(file = file.path(FiguresDir, '0_10cm_absdrawdown_cell_181807_2009-02-15.jpg'), family = 'Times New Roman', width = 6, height = 4, pointsize = 12, units = 'in', res=800)
+tiff(file = file.path(FiguresDir, '0_10cm_absdrawdown_cell_181807_2009-02-15.tif'), family = 'Times New Roman', width = 6, height = 4, pointsize = 12, units = 'in', res=800, compression = 'lzw')
 par(mar=c(4.25,4.25,0.5,0.5))
 plot(results_files[[1]]$time_days, results_files[[1]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[1]/255, texture_colors$green[1]/255, texture_colors$blue[1]/255), ylim=c(0.08,0.48), xlim = c(0,30), ylab=expression('0-10 cm water content (cm H'[2]*'O cm soil'^-1*')'), xlab = 'Days post-flooding')
 lines(results_files[[2]]$time_days, results_files[[2]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[2]/255, texture_colors$green[2]/255, texture_colors$blue[2]/255))
@@ -100,7 +99,11 @@ lines(results_files[[8]]$time_days, results_files[[8]]$theta_0_10cm_avg, type = 
 lines(results_files[[9]]$time_days, results_files[[9]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[9]/255, texture_colors$green[9]/255, texture_colors$blue[9]/255))
 lines(results_files[[10]]$time_days, results_files[[10]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[10]/255, texture_colors$green[10]/255, texture_colors$blue[10]/255))
 legend('topright', legend=texture_colors$textures, col=rgb(red=texture_colors$red/255, green = texture_colors$green/255, blue = texture_colors$blue/255), lty=1, lwd=1.5, ncol=2)
+for (i in 1:nrow(texture_colors)) {
+    points(x=trafficDF$fd_2009.02.15[trafficDF$cokey==texture_colors$median_cokeys[i]], y=soilsDF$theta_fc_10cm[soilsDF$cokey==texture_colors$median_cokeys[i]]*trafficDF$traff_def[trafficDF$cokey==texture_colors$median_cokeys[i]], col=rgb(texture_colors$red[i]/255, texture_colors$green[i]/255, texture_colors$blue[i]/255))
+}
 dev.off()
+
 
 #plot 0-10 cm relative water content
 jpeg(file = file.path(FiguresDir, '0_10cm_reldrawdown_cell_181807_2009-02-15.jpg'), family = 'Times New Roman', width = 6, height = 4, pointsize = 12, units = 'in', res=800)
