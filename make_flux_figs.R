@@ -8,6 +8,7 @@ library(extrafontdb)
 loadfonts(device = 'win')
 FiguresDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/Figures'
 FebResultsDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/climate_runs/typical profiles/cell_181807_2009-02-15'
+AprResultsDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/climate_runs/typical profiles/cell_181807_2009-04-15'
 trafficDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/climate_run_summaries_final/by_cell/'
 soilsDir <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/soils_of_interest'
 textures <- c('clay', 'silty clay' , 'silty clay loam', 'clay loam', 'silt loam', 'sandy clay loam', 'loam', 'sandy loam', 'loamy sand', 'sand')
@@ -16,26 +17,57 @@ soilsDF <- read.csv(file.path(soilsDir, 'soils_modeled_revised_QCpass_Oct2020.cs
 trafficDF <- read.csv(file.path(trafficDir, 'cell_181807_results.csv'), stringsAsFactors = FALSE)
 trafficDF[trafficDF$cokey==11855610,]
 
-read_in_flux_files <- function(texture, directory) {
+# texture <- 'Sandy loam'
+# directory <- 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/HYDRUS_runs/zero_flux_tests/sandy loam'
+theta_fc_est <- function(theta_s, theta_r, Ks, n) {
+  (n^(-0.6*(2+log10(Ks))))*(theta_s - theta_r) + theta_r
+}
+read_in_flux_files <- function(texture, directory, climateRuns=TRUE, columnNames=c('time_days', 'h_0cm', 'theta_0cm', 'flux_0cm', 'h_1cm', 'theta_1cm', 'flux_1cm', 'h_2cm', 'theta_2cm', 'flux_2cm', 'h_3cm', 'theta_3cm', 'flux_3cm', 'h_4cm', 'theta_4cm', 'flux_4cm', 'h_5cm', 'theta_5cm', 'flux_5cm', 'h_6cm', 'theta_6cm', 'flux_6cm', 'h_7cm', 'theta_7cm', 'flux_7cm', 'h_8cm', 'theta_8cm', 'flux_8cm', 'h_9cm', 'theta_9cm', 'flux_9cm', 'h_10cm', 'theta_10cm', 'flux_10cm', 'h_15cm', 'theta_15cm', 'flux_15cm', 'h_20cm', 'theta_20cm', 'flux_20cm', 'h_30cm', 'theta_30cm', 'flux_30cm', 'h_50cm', 'theta_50cm', 'flux_50cm'), profile_1cm=FALSE) {
   subDir <- texture
-  f_path <- list.dirs(file.path(directory, subDir), recursive = FALSE, full.names = FALSE)
-  obs <- read.table(file.path(directory, subDir, f_path, f_path, 'Obs_Node.out'), col.names = c('time_days', 'h_0cm', 'theta_0cm', 'flux_0cm', 'h_1cm', 'theta_1cm', 'flux_1cm', 'h_2cm', 'theta_2cm', 'flux_2cm', 'h_3cm', 'theta_3cm', 'flux_3cm', 'h_4cm', 'theta_4cm', 'flux_4cm', 'h_5cm', 'theta_5cm', 'flux_5cm', 'h_6cm', 'theta_6cm', 'flux_6cm', 'h_7cm', 'theta_7cm', 'flux_7cm', 'h_8cm', 'theta_8cm', 'flux_8cm', 'h_9cm', 'theta_9cm', 'flux_9cm', 'h_10cm', 'theta_10cm', 'flux_10cm', 'h_15cm', 'theta_15cm', 'flux_15cm', 'h_20cm', 'theta_20cm', 'flux_20cm', 'h_30cm', 'theta_30cm', 'flux_30cm', 'h_50cm', 'theta_50cm', 'flux_50cm'), header = FALSE, nrow=948, skip=11)
-  obs$theta_0_10cm_avg <- apply(obs[,c(3,6,9,12,15,18,21,24,27,30,33)], 1, mean)
-  obs <- obs[2:nrow(obs),] #ignore time 0.001 when flooding starts
-  obs$time_days <- obs$time_days - 5 #time 0 means when flooding ends
-  obs$time_diff <- c(0, obs$time_days[2:length(obs$time_days)] - obs$time_days[1:(length(obs$time_days)-1)])
-  obs$cum_flux_0cm <- cumsum(obs$flux_0cm * obs$time_diff)
-  obs$cum_flux_10cm <- cumsum(obs$flux_10cm * obs$time_diff)
-  obs$cum_flux_30cm <- cumsum(obs$flux_30cm * obs$time_diff)
-  obs$net_flux_0_10cm <- obs$flux_0cm - obs$flux_10cm
-  obs$net_flux_0_30cm <- obs$flux_0cm - obs$flux_30cm
-  theta_fc <- soilsDF$theta_fc_10cm[match(texture_colors$median_cokeys[texture_colors$textures==texture], soilsDF$cokey)]
-  obs$theta_0_10cm_rel <- obs$theta_0_10cm_avg / theta_fc
-  obs
+  texture <- tolower(texture)
+  if(climateRuns) {
+    f_path <- list.dirs(file.path(directory, subDir), recursive = FALSE, full.names = FALSE)
+    obs <- read.table(file.path(directory, subDir, f_path, f_path, 'Obs_Node.out'), col.names = c('time_days', 'h_0cm', 'theta_0cm', 'flux_0cm', 'h_1cm', 'theta_1cm', 'flux_1cm', 'h_2cm', 'theta_2cm', 'flux_2cm', 'h_3cm', 'theta_3cm', 'flux_3cm', 'h_4cm', 'theta_4cm', 'flux_4cm', 'h_5cm', 'theta_5cm', 'flux_5cm', 'h_6cm', 'theta_6cm', 'flux_6cm', 'h_7cm', 'theta_7cm', 'flux_7cm', 'h_8cm', 'theta_8cm', 'flux_8cm', 'h_9cm', 'theta_9cm', 'flux_9cm', 'h_10cm', 'theta_10cm', 'flux_10cm', 'h_15cm', 'theta_15cm', 'flux_15cm', 'h_20cm', 'theta_20cm', 'flux_20cm', 'h_30cm', 'theta_30cm', 'flux_30cm', 'h_50cm', 'theta_50cm', 'flux_50cm'), header = FALSE, nrow=948, skip=11)
+  } else {
+    obs <- read.table(file.path(directory, subDir, 'Obs_Node.out'), col.names = columnNames, header = FALSE, nrow=948, skip=11)
+  }
+  if (profile_1cm) {
+    obs$theta_0_1cm_avg <- apply(obs[,c(3,6,9)], 1, mean)
+    obs <- obs[2:nrow(obs),] #ignore time 0.001 when flooding starts
+    obs$time_days <- obs$time_days - 5 #time 0 means when flooding ends
+    theta_fc <- soilsDF$theta_fc_10cm[match(texture_colors$median_cokeys[texture_colors$textures==texture], soilsDF$cokey)]
+    obs$theta_0_1cm_rel <- obs$theta_0_1cm_avg / theta_fc
+  } else {
+      obs$theta_0_10cm_avg <- apply(obs[,c(3,6,9,12,15,18,21,24,27,30,33)], 1, mean)
+      obs <- obs[2:nrow(obs),] #ignore time 0.001 when flooding starts
+      obs$time_days <- obs$time_days - 5 #time 0 means when flooding ends
+      obs$time_diff <- c(0, obs$time_days[2:length(obs$time_days)] - obs$time_days[1:(length(obs$time_days)-1)])
+      obs$cum_flux_0cm <- cumsum(obs$flux_0cm * obs$time_diff)
+      obs$cum_flux_10cm <- cumsum(obs$flux_10cm * obs$time_diff)
+  # obs$cum_flux_30cm <- cumsum(obs$flux_30cm * obs$time_diff)
+      obs$net_flux_0_10cm <- obs$flux_0cm - obs$flux_10cm
+  # obs$net_flux_0_30cm <- obs$flux_0cm - obs$flux_30cm
+      theta_fc <- soilsDF$theta_fc_10cm[match(texture_colors$median_cokeys[texture_colors$textures==texture], soilsDF$cokey)]
+      obs$theta_0_10cm_rel <- obs$theta_0_10cm_avg / theta_fc
+  }
+    obs
 }
 results_files <- lapply(textures, read_in_flux_files, directory=FebResultsDir)
 # summary(obs$flux_0cm)
 head(results_files[[1]], 10)
+
+results_files_Apr <- lapply(textures, read_in_flux_files, directory=AprResultsDir)
+
+sandy_loam_no_evap <- read_in_flux_files(texture = 'Sandy loam', directory = 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/HYDRUS_runs/zero_flux_tests/sandy loam', climateRuns = FALSE, columnNames = c('time_days', 'h_0cm', 'theta_0cm', 'flux_0cm', 'h_1cm', 'theta_1cm', 'flux_1cm', 'h_2cm', 'theta_2cm', 'flux_2cm', 'h_3cm', 'theta_3cm', 'flux_3cm', 'h_4cm', 'theta_4cm', 'flux_4cm', 'h_5cm', 'theta_5cm', 'flux_5cm', 'h_6cm', 'theta_6cm', 'flux_6cm', 'h_7cm', 'theta_7cm', 'flux_7cm', 'h_8cm', 'theta_8cm', 'flux_8cm', 'h_9cm', 'theta_9cm', 'flux_9cm', 'h_10cm', 'theta_10cm', 'flux_10cm', 'h_15cm', 'theta_15cm', 'flux_15cm', 'h_20cm', 'theta_20cm', 'flux_20cm', 'h_30cm', 'theta_30cm', 'flux_30cm', 'h_50cm', 'theta_50cm', 'flux_50cm', 'h_200cm', 'theta_200cm', 'flux_200cm'))
+colnames(sandy_loam_no_evap)
+sandy_loam_no_evap[,c('time_days', 'theta_0_10cm_avg', 'flux_10cm')]
+theta_fc_est(theta_s = 0.3639, theta_r = 0.03333, Ks = 48.21478, n = 1.36604)
+
+sandy_loam_no_evap_100cm <- read_in_flux_files(texture = 'Sandy loam', directory = 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/HYDRUS_runs/zero_flux_tests/sandy loam 100cm', climateRuns = FALSE, columnNames = c('time_days', 'h_0cm', 'theta_0cm', 'flux_0cm', 'h_1cm', 'theta_1cm', 'flux_1cm', 'h_2cm', 'theta_2cm', 'flux_2cm', 'h_3cm', 'theta_3cm', 'flux_3cm', 'h_4cm', 'theta_4cm', 'flux_4cm', 'h_5cm', 'theta_5cm', 'flux_5cm', 'h_6cm', 'theta_6cm', 'flux_6cm', 'h_7cm', 'theta_7cm', 'flux_7cm', 'h_8cm', 'theta_8cm', 'flux_8cm', 'h_9cm', 'theta_9cm', 'flux_9cm', 'h_10cm', 'theta_10cm', 'flux_10cm', 'h_15cm', 'theta_15cm', 'flux_15cm', 'h_20cm', 'theta_20cm', 'flux_20cm', 'h_30cm', 'theta_30cm', 'flux_30cm', 'h_50cm', 'theta_50cm', 'flux_50cm', 'h_100cm', 'theta_100cm', 'flux_100cm'))
+
+sandy_loam_no_evap_10cm <- read_in_flux_files(texture = 'Sandy loam', directory = 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/HYDRUS_runs/zero_flux_tests/sandy loam 10cm', climateRuns = FALSE, columnNames = c('time_days', 'h_0cm', 'theta_0cm', 'flux_0cm', 'h_1cm', 'theta_1cm', 'flux_1cm', 'h_2cm', 'theta_2cm', 'flux_2cm', 'h_3cm', 'theta_3cm', 'flux_3cm', 'h_4cm', 'theta_4cm', 'flux_4cm', 'h_5cm', 'theta_5cm', 'flux_5cm', 'h_6cm', 'theta_6cm', 'flux_6cm', 'h_7cm', 'theta_7cm', 'flux_7cm', 'h_8cm', 'theta_8cm', 'flux_8cm', 'h_9cm', 'theta_9cm', 'flux_9cm', 'h_10cm', 'theta_10cm', 'flux_10cm'))
+
+sandy_loam_no_evap_1cm <- read_in_flux_files(texture = 'Sandy loam', directory = 'C:/Users/smdevine/Desktop/post doc/Dahlke/trafficability study/HYDRUS_runs/zero_flux_tests/sandy loam 1cm', climateRuns = FALSE, columnNames = c('time_days', 'h_0cm', 'theta_0cm', 'flux_0cm', 'h_0.5cm', 'theta_0.5cm', 'flux_0.5cm', 'h_1cm', 'theta_1cm', 'flux_1cm'), profile_1cm = TRUE)
 
 #plot cumulative fluxes by textural class
 for (i in seq_along(textures)) {
@@ -77,18 +109,46 @@ abline(h=0.2523672*0.89, lty=3)
 results_files[[7]][ ,c('time_days', 'flux_0cm', 'flux_10cm', 'flux_30cm', 'net_flux_0_10cm', 'theta_0_10cm_avg')]
 soilsDF[soilsDF$cokey==texture_colors$median_cokeys[7],]
 
-#sandy loam
-plot(results_files[[8]]$time_days, results_files[[8]]$theta_0_10cm_avg, type = 'l', ylim=c(0,0.5), xlim = c(0,30), col='black', ylab=expression('0-10 cm water content (cm H'[2]*'O cm soil'^-1*')'), xlab = 'Days post-flooding')
-text(x=5, y=0.49, textures[8])
-abline(h=0.19925, lty=3)
-abline(h=0.19925*0.9, lty=3)
-results_files[[8]][ ,c('time_days', 'flux_0cm', 'flux_10cm', 'flux_30cm', 'net_flux_0_10cm', 'theta_0_10cm_avg')]
-soilsDF[soilsDF$cokey==texture_colors$median_cokeys[8],]
+#sandy loam theta fc exploration
+tiff(file = file.path(FiguresDir, 'FC_exploration_sandy_loam.tif'), family = 'Times New Roman', width = 6.5, height = 4.5, pointsize = 12, units = 'in', res=800, compression = 'lzw')
+par(mar=c(3,3.5,0.25,0.25))
+plot(results_files[[8]]$time_days, results_files[[8]]$theta_0_10cm_avg, type = 'l', ylim=c(0.1,0.36), xlim = c(0,60), col=rgb(texture_colors$red[8]/255, texture_colors$green[8]/255, texture_colors$blue[8]/255), ylab='', xlab = '', lty=1)
+mtext(expression('Soil water content (cm H'[2]*'O cm soil'^-1*')'), side=2, line=2.25)
+mtext('Days post-flooding', side = 1, line=2)
+lines(results_files_Apr[[8]]$time_days, results_files_Apr[[8]]$theta_0_10cm_avg, type = 'l', ylim=c(0.1,0.5), xlim = c(0,30), col=rgb(texture_colors$red[8]/255, texture_colors$green[8]/255, texture_colors$blue[8]/255), lty=2)
+lines(sandy_loam_no_evap_1cm$time_days, sandy_loam_no_evap_1cm$theta_1cm, col='grey', lty=3)
+lines(sandy_loam_no_evap_10cm$time_days, sandy_loam_no_evap_10cm$theta_10cm, col='dark grey', lty=4)
+lines(sandy_loam_no_evap$time_days, sandy_loam_no_evap$theta_1cm, col='black', lty=3)
+lines(sandy_loam_no_evap$time_days, sandy_loam_no_evap$theta_10cm, col='black', lty=4)
+lines(sandy_loam_no_evap$time_days, sandy_loam_no_evap$theta_30cm, col='black', lty=5)
+# text(x=5, y=0.49, textures[8])
+abline(h=theta_fc_est(theta_s = 0.3639, theta_r = 0.03333, Ks = 48.21478, n = 1.36604), col='red', lty=2)
+points(sandy_loam_no_evap_1cm$time_days[head(which(sandy_loam_no_evap_1cm$flux_1cm > -0.01), 1)], sandy_loam_no_evap_1cm$theta_1cm[head(which(sandy_loam_no_evap_1cm$flux_1cm > -0.01), 1)], pch=1, col='grey')
+points(sandy_loam_no_evap_10cm$time_days[head(which(sandy_loam_no_evap_10cm$flux_10cm > -0.01), 1)], sandy_loam_no_evap_10cm$theta_10cm[head(which(sandy_loam_no_evap_10cm$flux_10cm > -0.01), 1)], pch=1, col='grey')
+points(sandy_loam_no_evap$time_days[head(which(sandy_loam_no_evap$flux_1cm > -0.01), 1)], sandy_loam_no_evap$theta_1cm[head(which(sandy_loam_no_evap$flux_1cm > -0.01), 1)], pch=1)
+points(sandy_loam_no_evap$time_days[head(which(sandy_loam_no_evap$flux_10cm > -0.01), 1)], sandy_loam_no_evap$theta_10cm[head(which(sandy_loam_no_evap$flux_10cm > -0.01), 1)], pch=1)
+points(sandy_loam_no_evap$time_days[head(which(sandy_loam_no_evap$flux_30cm > -0.01), 1)], sandy_loam_no_evap$theta_30cm[head(which(sandy_loam_no_evap$flux_30cm > -0.01), 1)], pch=1)
+legend('topright', legend=c('30-cm depth, 200-cm profile, PET=0', '10-cm depth, 200-cm profile, PET=0', '1-cm depth, 200-cm profile, PET=0', '0-10 cm average, 200-cm profile, PET=February', '0-10 cm average, 200-cm profile, PET=April', '10-cm depth, 10-cm profile, PET=0', '1-cm depth, 1-cm profile, PET=0', 'field capacity'), lty = c(5:3, 1:2, 4:2), col = c(rep('black', 3), rep(rgb(texture_colors$red[8]/255, texture_colors$green[8]/255, texture_colors$blue[8]/255), 2), 'dark grey', 'grey', 'red'), bty = 'n')
+dev.off()
 
-#plot vwc drawdown
-tiff(file = file.path(FiguresDir, '0_10cm_absdrawdown_cell_181807_2009-02-15.tif'), family = 'Times New Roman', width = 6, height = 4, pointsize = 12, units = 'in', res=800, compression = 'lzw')
-par(mar=c(4.25,4.25,0.5,0.5))
-plot(results_files[[1]]$time_days, results_files[[1]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[1]/255, texture_colors$green[1]/255, texture_colors$blue[1]/255), ylim=c(0.08,0.48), xlim = c(0,30), ylab=expression('0-10 cm water content (cm H'[2]*'O cm soil'^-1*')'), xlab = 'Days post-flooding')
+#at what water content does flux at 50 cm equal 0.01 cm day-1?
+results_files[[8]]$theta_50cm[head(which(results_files[[8]]$flux_50cm > -0.01), 1)]
+sandy_loam_no_evap$theta_10cm[head(which(sandy_loam_no_evap$flux_10cm > -0.01), 1)] #0.2232
+sandy_loam_no_evap$theta_30cm[head(which(sandy_loam_no_evap$flux_30cm > -0.01), 1)] #0.2081
+sandy_loam_no_evap$theta_50cm[head(which(sandy_loam_no_evap$flux_50cm > -0.01), 1)] #NA
+
+#at what water content does flux at 10 cm equal 0.01 cm day-1 in 10 cm profile with zero evap?
+sandy_loam_no_evap_1cm$theta_1cm[head(which(sandy_loam_no_evap_10cm$flux_1cm > -0.01), 1)] #0.1866
+sandy_loam_no_evap_10cm$theta_10cm[head(which(sandy_loam_no_evap_10cm$flux_10cm > -0.01), 1)] #0.1909
+
+sandy_loam_no_evap_100cm$theta_100cm[head(which(sandy_loam_no_evap_100cm$flux_100cm > -0.01), 1)] #NA
+
+#plot Feb vwc drawdown
+tiff(file = file.path(FiguresDir, '0_10cm_absdrawdown_cell_181807_2009-02-15.tif'), family = 'Times New Roman', width = 4.5, height = 3.25, pointsize = 12, units = 'in', res=800, compression = 'lzw')
+par(mar=c(3,3.5,0.25,0.25))
+plot(results_files[[1]]$time_days, results_files[[1]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[1]/255, texture_colors$green[1]/255, texture_colors$blue[1]/255), ylim=c(0.08,0.48), xlim = c(0,25), ylab='', xlab = '')
+mtext('Days post-flooding (February)', side = 1, line=2)
+mtext(expression('0-10 cm water content (cm H'[2]*'O cm soil'^-1*')'), side=2, line=2.25, at=0.25)
 lines(results_files[[2]]$time_days, results_files[[2]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[2]/255, texture_colors$green[2]/255, texture_colors$blue[2]/255))
 lines(results_files[[3]]$time_days, results_files[[3]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[3]/255, texture_colors$green[3]/255, texture_colors$blue[3]/255))
 lines(results_files[[4]]$time_days, results_files[[4]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[4]/255, texture_colors$green[4]/255, texture_colors$blue[4]/255))
@@ -98,17 +158,39 @@ lines(results_files[[7]]$time_days, results_files[[7]]$theta_0_10cm_avg, type = 
 lines(results_files[[8]]$time_days, results_files[[8]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[8]/255, texture_colors$green[8]/255, texture_colors$blue[8]/255))
 lines(results_files[[9]]$time_days, results_files[[9]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[9]/255, texture_colors$green[9]/255, texture_colors$blue[9]/255))
 lines(results_files[[10]]$time_days, results_files[[10]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[10]/255, texture_colors$green[10]/255, texture_colors$blue[10]/255))
-legend('topright', legend=texture_colors$textures, col=rgb(red=texture_colors$red/255, green = texture_colors$green/255, blue = texture_colors$blue/255), lty=1, lwd=1.5, ncol=2)
+# legend('topright', legend=texture_colors$textures, col=rgb(red=texture_colors$red/255, green = texture_colors$green/255, blue = texture_colors$blue/255), lty=1, lwd=1.5, ncol=2, cex = 0.8)
 for (i in 1:nrow(texture_colors)) {
     points(x=trafficDF$fd_2009.02.15[trafficDF$cokey==texture_colors$median_cokeys[i]], y=soilsDF$theta_fc_10cm[soilsDF$cokey==texture_colors$median_cokeys[i]]*trafficDF$traff_def[trafficDF$cokey==texture_colors$median_cokeys[i]], col=rgb(texture_colors$red[i]/255, texture_colors$green[i]/255, texture_colors$blue[i]/255))
 }
 dev.off()
 
+##plot Apr vwc drawdown
+tiff(file = file.path(FiguresDir, '0_10cm_absdrawdown_cell_181807_2009-04-15.tif'), family = 'Times New Roman', width = 4.5, height = 3.25, pointsize = 12, units = 'in', res=800, compression = 'lzw')
+par(mar=c(3,3.5,0.25,0.25))
+plot(results_files_Apr[[1]]$time_days, results_files_Apr[[1]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[1]/255, texture_colors$green[1]/255, texture_colors$blue[1]/255), ylim=c(0.08,0.48), xlim = c(0,15), ylab='', xlab = '')
+mtext('Days post-flooding (April)', side = 1, line=2)
+mtext(expression('0-10 cm water content (cm H'[2]*'O cm soil'^-1*')'), side=2, line=2.25, at=0.25)
+lines(results_files_Apr[[2]]$time_days, results_files_Apr[[2]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[2]/255, texture_colors$green[2]/255, texture_colors$blue[2]/255))
+lines(results_files_Apr[[3]]$time_days, results_files_Apr[[3]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[3]/255, texture_colors$green[3]/255, texture_colors$blue[3]/255))
+lines(results_files_Apr[[4]]$time_days, results_files_Apr[[4]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[4]/255, texture_colors$green[4]/255, texture_colors$blue[4]/255))
+lines(results_files_Apr[[5]]$time_days, results_files_Apr[[5]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[5]/255, texture_colors$green[5]/255, texture_colors$blue[5]/255))
+lines(results_files_Apr[[6]]$time_days, results_files_Apr[[6]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[6]/255, texture_colors$green[6]/255, texture_colors$blue[6]/255))
+lines(results_files_Apr[[7]]$time_days, results_files_Apr[[7]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[7]/255, texture_colors$green[7]/255, texture_colors$blue[7]/255))
+lines(results_files_Apr[[8]]$time_days, results_files_Apr[[8]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[8]/255, texture_colors$green[8]/255, texture_colors$blue[8]/255))
+lines(results_files_Apr[[9]]$time_days, results_files_Apr[[9]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[9]/255, texture_colors$green[9]/255, texture_colors$blue[9]/255))
+lines(results_files_Apr[[10]]$time_days, results_files_Apr[[10]]$theta_0_10cm_avg, type = 'l', col=rgb(texture_colors$red[10]/255, texture_colors$green[10]/255, texture_colors$blue[10]/255))
+# legend('topright', legend=texture_colors$textures, col=rgb(red=texture_colors$red/255, green = texture_colors$green/255, blue = texture_colors$blue/255), lty=1, lwd=1.5, ncol=2, cex = 0.8)
+for (i in 1:nrow(texture_colors)) {
+  points(x=trafficDF$fd_2009.04.15[trafficDF$cokey==texture_colors$median_cokeys[i]], y=soilsDF$theta_fc_10cm[soilsDF$cokey==texture_colors$median_cokeys[i]]*trafficDF$traff_def[trafficDF$cokey==texture_colors$median_cokeys[i]], col=rgb(texture_colors$red[i]/255, texture_colors$green[i]/255, texture_colors$blue[i]/255))
+}
+dev.off()
 
-#plot 0-10 cm relative water content
-jpeg(file = file.path(FiguresDir, '0_10cm_reldrawdown_cell_181807_2009-02-15.jpg'), family = 'Times New Roman', width = 6, height = 4, pointsize = 12, units = 'in', res=800)
-par(mar=c(4,4,0.5,0.5))
-plot(results_files[[1]]$time_days, results_files[[1]]$theta_0_10cm_rel, type = 'l', col=rgb(texture_colors$red[1]/255, texture_colors$green[1]/255, texture_colors$blue[1]/255), ylim=c(0.6,1.9), xlim = c(0,30), ylab='0-10 cm water content (FC fraction)', xlab = 'Days post-flooding mid-February')
+#plot 0-10 cm relative water content (February)
+tiff(file = file.path(FiguresDir, '0_10cm_reldrawdown_cell_181807_2009-02-15.tif'), family = 'Times New Roman', width = 4.5, height = 3.25, pointsize = 12, units = 'in', res=800)
+par(mar=c(3,3.5,0.25,0.25))
+plot(results_files[[1]]$time_days, results_files[[1]]$theta_0_10cm_rel, type = 'l', col=rgb(texture_colors$red[1]/255, texture_colors$green[1]/255, texture_colors$blue[1]/255), ylim=c(0.6,1.9), xlim = c(0,25), ylab='', xlab = '')
+mtext('Days post-flooding (February)', side=1, line=2)
+mtext('0-10 cm water content (FC fraction)', side=2, line=2.25)
 lines(results_files[[2]]$time_days, results_files[[2]]$theta_0_10cm_rel, type = 'l', col=rgb(texture_colors$red[2]/255, texture_colors$green[2]/255, texture_colors$blue[2]/255))
 lines(results_files[[3]]$time_days, results_files[[3]]$theta_0_10cm_rel, type = 'l', col=rgb(texture_colors$red[3]/255, texture_colors$green[3]/255, texture_colors$blue[3]/255))
 lines(results_files[[4]]$time_days, results_files[[4]]$theta_0_10cm_rel, type = 'l', col=rgb(texture_colors$red[4]/255, texture_colors$green[4]/255, texture_colors$blue[4]/255))
@@ -118,10 +200,37 @@ lines(results_files[[7]]$time_days, results_files[[7]]$theta_0_10cm_rel, type = 
 lines(results_files[[8]]$time_days, results_files[[8]]$theta_0_10cm_rel, type = 'l', col=rgb(texture_colors$red[8]/255, texture_colors$green[8]/255, texture_colors$blue[8]/255))
 lines(results_files[[9]]$time_days, results_files[[9]]$theta_0_10cm_rel, type = 'l', col=rgb(texture_colors$red[9]/255, texture_colors$green[9]/255, texture_colors$blue[9]/255))
 lines(results_files[[10]]$time_days, results_files[[10]]$theta_0_10cm_rel, type = 'l', col=rgb(texture_colors$red[10]/255, texture_colors$green[10]/255, texture_colors$blue[10]/255))
-abline(h=1, lty=2)
-abline(h=0.9, lty=2)
-abline(h=0.8, lty=2)
-legend('topright', legend=texture_colors$textures, col=rgb(red=texture_colors$red/255, green = texture_colors$green/255, blue = texture_colors$blue/255), lty=1, lwd=1.5, ncol=2)
+# abline(h=1, lty=2)
+abline(h=0.95, lty=2)
+abline(h=0.85, lty=2)
+legend('topright', legend=texture_colors$textures, col=rgb(red=texture_colors$red/255, green = texture_colors$green/255, blue = texture_colors$blue/255), lty=1, lwd=1.5, ncol=2, cex=0.8, bty = 'n')
+for (i in 1:nrow(texture_colors)) {
+  points(x=trafficDF$fd_2009.02.15[trafficDF$cokey==texture_colors$median_cokeys[i]], y=trafficDF$traff_def[trafficDF$cokey==texture_colors$median_cokeys[i]], col=rgb(texture_colors$red[i]/255, texture_colors$green[i]/255, texture_colors$blue[i]/255), cex=0.8)
+}
+dev.off()
+
+#plot 0-10 cm relative water content (April)
+tiff(file = file.path(FiguresDir, '0_10cm_reldrawdown_cell_181807_2009-04-15.tif'), family = 'Times New Roman', width = 4.5, height = 3.25, pointsize = 12, units = 'in', res=800)
+par(mar=c(3,3.5,0.25,0.25))
+plot(results_files_Apr[[1]]$time_days, results_files_Apr[[1]]$theta_0_10cm_rel, type = 'l', col=rgb(texture_colors$red[1]/255, texture_colors$green[1]/255, texture_colors$blue[1]/255), ylim=c(0.6,1.9), xlim = c(0,15), ylab='', xlab = '')
+mtext('Days post-flooding (April)', side=1, line=2)
+mtext('0-10 cm water content (FC fraction)', side=2, line=2.25)
+lines(results_files_Apr[[2]]$time_days, results_files_Apr[[2]]$theta_0_10cm_rel, type = 'l', col=rgb(texture_colors$red[2]/255, texture_colors$green[2]/255, texture_colors$blue[2]/255))
+lines(results_files_Apr[[3]]$time_days, results_files_Apr[[3]]$theta_0_10cm_rel, type = 'l', col=rgb(texture_colors$red[3]/255, texture_colors$green[3]/255, texture_colors$blue[3]/255))
+lines(results_files_Apr[[4]]$time_days, results_files_Apr[[4]]$theta_0_10cm_rel, type = 'l', col=rgb(texture_colors$red[4]/255, texture_colors$green[4]/255, texture_colors$blue[4]/255))
+lines(results_files_Apr[[5]]$time_days, results_files_Apr[[5]]$theta_0_10cm_rel, type = 'l', col=rgb(texture_colors$red[5]/255, texture_colors$green[5]/255, texture_colors$blue[5]/255))
+lines(results_files_Apr[[6]]$time_days, results_files_Apr[[6]]$theta_0_10cm_rel, type = 'l', col=rgb(texture_colors$red[6]/255, texture_colors$green[6]/255, texture_colors$blue[6]/255))
+lines(results_files_Apr[[7]]$time_days, results_files_Apr[[7]]$theta_0_10cm_rel, type = 'l', col=rgb(texture_colors$red[7]/255, texture_colors$green[7]/255, texture_colors$blue[7]/255))
+lines(results_files_Apr[[8]]$time_days, results_files_Apr[[8]]$theta_0_10cm_rel, type = 'l', col=rgb(texture_colors$red[8]/255, texture_colors$green[8]/255, texture_colors$blue[8]/255))
+lines(results_files_Apr[[9]]$time_days, results_files_Apr[[9]]$theta_0_10cm_rel, type = 'l', col=rgb(texture_colors$red[9]/255, texture_colors$green[9]/255, texture_colors$blue[9]/255))
+lines(results_files_Apr[[10]]$time_days, results_files_Apr[[10]]$theta_0_10cm_rel, type = 'l', col=rgb(texture_colors$red[10]/255, texture_colors$green[10]/255, texture_colors$blue[10]/255))
+# abline(h=1, lty=2)
+abline(h=0.95, lty=2)
+abline(h=0.85, lty=2)
+# legend('topright', legend=texture_colors$textures, col=rgb(red=texture_colors$red/255, green = texture_colors$green/255, blue = texture_colors$blue/255), lty=1, lwd=1.5, ncol=2, cex=0.8, bty = 'n')
+for (i in 1:nrow(texture_colors)) {
+  points(x=trafficDF$fd_2009.04.15[trafficDF$cokey==texture_colors$median_cokeys[i]], y=trafficDF$traff_def[trafficDF$cokey==texture_colors$median_cokeys[i]], col=rgb(texture_colors$red[i]/255, texture_colors$green[i]/255, texture_colors$blue[i]/255), cex=0.8)
+}
 dev.off()
 
 #plot 0-10 cm net daily flux
