@@ -306,6 +306,15 @@ crit_val <- 80
 soils_modeled_10cm_revised[which(soils_modeled_10cm_revised$sat_pct_pf >=80 & soils_modeled_10cm_revised$wb_PF_cm < 0.25 & soils_modeled_10cm_revised$wb_rel_pct <= 3 & soils_modeled_10cm_revised$textural_class==x & soils_modeled_10cm_revised$result_opt2 > crit_val),]
 soils_modeled_10cm_revised[which(soils_modeled_10cm_revised$textural_class==x & soils_modeled_10cm_revised$result_opt2 > crit_val),]
 
+dim(soils_modeled_10cm_revised) #3319
+sum(is.na(soils_modeled_10cm_revised$result_opt2)) #83
+sum(soils_modeled_10cm_revised$wb_PF_cm >= 0.25, na.rm = TRUE) #10
+sum(soils_modeled_10cm_revised$wb_rel_pct > 3, na.rm = TRUE) #316
+3319-83-10-316
+colnames(soils_modeled_10cm_revised)
+colnames(water_blnc_results)
+sum(soils_modeled_10cm_revised)
+
 #create a QC limited soil database
 soils_modeled_10cm_revised_QC <- soils_modeled_10cm_revised[which(soils_modeled_10cm_revised$wb_PF_cm < 0.25 & soils_modeled_10cm_revised$wb_rel_pct <= 3), ]
 dim(soils_modeled_10cm_revised_QC) #2920
