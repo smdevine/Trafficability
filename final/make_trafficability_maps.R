@@ -109,3 +109,16 @@ climsoil_traffic_est[climsoil_traffic_est$code=='218008_sandy loam',]
 as.data.frame(mu_sagbi_10cm[45189,])
 as.data.frame(mu_traffic_results[mu_traffic_results$FID_c_m==288434,])
 climsoil_traffic_est[climsoil_traffic_est$code=='142496_clay',]
+
+#read-in traffic shapefile to calc some stats for paper
+mu_traffic_results <- shapefile(file.path(trafficDir, 'shapefiles', 'mu_traffic_results.shp'))
+sum(mu_traffic_results$area_ha)
+sum(is.na(mu_traffic_results$Jan_days))
+sum(is.na(mu_traffic_results$Feb_days))
+sum(is.na(mu_traffic_results$Mar_days))
+sum(is.na(mu_traffic_results$Apr_days))
+sum(mu_traffic_results$area_ha[mu_traffic_results$Jan_days > 25]) / sum(mu_traffic_results$area_ha)
+sum(mu_traffic_results$area_ha[mu_traffic_results$Feb_days > 20]) / sum(mu_traffic_results$area_ha)
+sum(mu_traffic_results$area_ha[mu_traffic_results$Mar_days < 10]) / sum(mu_traffic_results$area_ha)
+sum(mu_traffic_results$area_ha[mu_traffic_results$Apr_days < 10]) / sum(mu_traffic_results$area_ha)
+sum(mu_traffic_results$area_ha[mu_traffic_results$Apr_days < 5]) / sum(mu_traffic_results$area_ha)
