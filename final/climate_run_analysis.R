@@ -229,6 +229,8 @@ write.csv(exp_decay_q3, file.path(dataDir, 'climate_soil', 'final results', 'exp
 
 texture_colors <- data.frame(textures=c('clay', 'silty clay' , 'silty clay loam', 'clay loam', 'silt loam', 'sandy clay loam', 'loam', 'sandy loam', 'loamy sand', 'sand'), red=c(169, 0, 0, 223, 0, 170, 255, 230, 115, 255), green=c(0, 112, 197, 115, 168, 255, 0, 152, 76, 255), blue=c(230, 255, 255, 255, 132, 0, 0, 0, 0, 0), stringsAsFactors = FALSE)
 
+power_curve_results <- read.csv()
+
 tiff(file = file.path(FiguresDir, 'days_to_traffic_vs_ETo_all_textures.tif'), family = 'Times New Roman', width = 6.5, height = 3.75, pointsize = 11, units = 'in', res=800, compression = 'lzw')
 par(mar=c(3.5, 4.5, 0.5, 0.5))
 curve(power_func(x, b=power_curve_results$b[power_curve_results$texture_class=='clay'], z=power_curve_results$z[power_curve_results$texture_class=='clay'], a=power_curve_results$a[power_curve_results$texture_class=='clay']), from=1, to=7, lwd=1.5, col=rgb(red = 169/255, green = 0, blue = 230/255), xlab='', ylab='Days to trafficability after flooding', xlim = c(0.95, 6.95), ylim=c(0,43), xaxt='n')
@@ -239,7 +241,8 @@ for (i in 3:10) {
   curve(power_func(x, b=power_curve_results$b[power_curve_results$texture_class==texture_colors$textures[i]], z=power_curve_results$z[power_curve_results$texture_class==texture_colors$textures[i]], a=power_curve_results$a[power_curve_results$texture_class==texture_colors$textures[i]]), from=1, to=7, lwd=1.5, col=rgb(red = texture_colors$red[i]/255, green = texture_colors$green[i]/255, blue = texture_colors$blue[i]/255), add=TRUE)
 }
 legend('topright', legend=texture_colors$textures, col=rgb(red=texture_colors$red/255, green = texture_colors$green/255, blue = texture_colors$blue/255), lty=1, lwd=1.5, ncol=2)
-text(x=1.35, y=40, 'A')
+legend('topleft', legend='a', bty='n')
+# text(x=1.35, y=40, 'A')
 dev.off()
 
 #make a figure showing IQRs for clay, clay loam, loam, and sandy loam
