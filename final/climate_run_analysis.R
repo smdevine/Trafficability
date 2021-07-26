@@ -239,7 +239,8 @@ for (i in 3:10) {
   curve(power_func(x, b=power_curve_results$b[power_curve_results$texture_class==texture_colors$textures[i]], z=power_curve_results$z[power_curve_results$texture_class==texture_colors$textures[i]], a=power_curve_results$a[power_curve_results$texture_class==texture_colors$textures[i]]), from=1, to=7, lwd=1.5, col=rgb(red = texture_colors$red[i]/255, green = texture_colors$green[i]/255, blue = texture_colors$blue[i]/255), add=TRUE)
 }
 legend('topright', legend=texture_colors$textures, col=rgb(red=texture_colors$red/255, green = texture_colors$green/255, blue = texture_colors$blue/255), lty=1, lwd=1.5, ncol=2)
-text(x=1.35, y=40, 'A')
+legend('topleft', legend='a', bty='n', inset = c(-0.025, 0))
+# text(x=1.35, y=40, 'A')
 dev.off()
 
 #make a figure showing IQRs for clay, clay loam, loam, and sandy loam
@@ -263,7 +264,8 @@ curve(power_func(x, b=power_curve_results$b[power_curve_results$texture_class=='
 curve(power_func(x, b=power_curve_q1$b[power_curve_q1$texture_class=='clay'], z=power_curve_q1$z[power_curve_q1$texture_class=='clay'], a=power_curve_q1$a[power_curve_q1$texture_class=='clay']), from=1.1, to=6.8, lwd=1.5, col=rgb(texture_colors[texture_colors$textures=='clay',2:4]/255), add=TRUE, lty=2)
 curve(exp_func(x, b=exp_decay_q3$b[exp_decay_q3$texture_class=='clay'], z=exp_decay_q3$z[exp_decay_q3$texture_class=='clay'], a=exp_decay_q3$a[exp_decay_q3$texture_class=='clay']), from=1.1, to=6.8, lwd=1.5, col=rgb(texture_colors[texture_colors$textures=='clay',2:4]/255), add=TRUE, lty=2)
 legend('topright', legend=c('clay', 'clay loam', 'loam', 'sandy loam'), col=rgb(texture_colors[which(texture_colors$textures %in% c('clay', 'clay loam', 'loam', 'sandy loam')),2:4]/255), lty=1, lwd=1.5, ncol=2)
-text(x=1.5, y=43, 'B')
+legend('topleft', legend='b', bty='n', inset = c(-0.025, 0))
+# text(x=1.5, y=43, 'B')
 dev.off()
 
 #4 texture plot with points
@@ -317,5 +319,6 @@ curve(power_func(x, b=power_curve_q1$b[power_curve_q1$texture_class=='clay'], z=
 curve(power_func(x, b=power_curve_q3$b[power_curve_q3$texture_class=='clay'], z=power_curve_q3$z[power_curve_q3$texture_class=='clay'], a=power_curve_q3$a[power_curve_q3$texture_class=='clay']), from=0.94, to=6.36
 , lwd=1.5, col=rgb(texture_colors[texture_colors$textures=='clay',2:4]/255), add=TRUE, lty=2)
 legend('topright', legend=c('clay','loam','sandy loam'), col=rgb(texture_colors[which(texture_colors$textures %in% c('clay','loam', 'sandy loam')),2:4]/255), lty=1, lwd=1.5, ncol=2)
-text(x=1.35, y=40, 'B')
+legend('topleft', legend='b', bty='n', inset = c(-0.025, 0))
+# text(x=1.35, y=40, 'B')
 dev.off()
