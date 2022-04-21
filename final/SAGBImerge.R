@@ -133,6 +133,7 @@ ca_mapunits_ca_ta #464430 features
 #read in shapefile created in ArcGIS from sagbi x ca mapunit intersection
 list.files(file.path(trafficDir, 'shapefiles'))
 mu_sagbi <- shapefile(file.path(trafficDir, 'shapefiles', 'mu_sagbi.shp'))
+names(mu_sagbi)
 2.47105 * sum(area(mu_sagbi) / 10000)
 mu_sagbi #188319 features
 mu_sagbi$area_ha <- area(mu_sagbi) / 10000
