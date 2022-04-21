@@ -5,8 +5,9 @@ library(aqp)
 CIMISrawDir <- 'D:/Dissertation/Allowable_Depletion/SpatialCIMIS'
 SAGBIdir <- 'C:/Users/smdevine/Desktop/SpatialData/SAGBI'
 mainDir <- 'C:/Users/smdevine/Desktop/PostDoc'
-SSURGOdir <- ssurgoDir <- file.path(mainDir, 'soil health/ssurgo_data')
 trafficDir <- file.path(mainDir, 'trafficability')
+SSURGOdir <- ssurgoDir <- file.path(trafficDir, 'soilweb app data')
+
 #general functions
 min_modified <- function(x) {
   if(all(is.na(x))) {
@@ -44,7 +45,14 @@ textural.class.calc <- function(sand, silt, clay, QC_param=1) {
                                                                                       ifelse(clay >= 40 & silt >= 40, 'silty clay',
                                                                                              ifelse(clay >= 40 & sand <= 45 & silt < 40, 'clay','undefined textural class'))))))))))))))
 }
-horizon_to_comp <- function(horizon_SPC, depth, comp_df, vars_of_interest = c('claytotal_r', 'silttotal_r', 'sandtotal_r', 'ksat_r'), varnames = c('clay', 'silt', 'sand', 'ksat'), SOC_content=FALSE, sum_AWC=FALSE) {
+wtd.mean <- function(x, y) {
+  # use horizon thickness as a weight
+  thick <- x$hzdepb_r - x$hzdept_r
+  # compute the weighted mean, accounting for the possibility of missing data
+  m <- weighted.mean(horizons(x)[[y]], w=thick, na.rm=TRUE)
+  m
+}
+horizon_to_comp <- function(horizon_SPC, depth, comp_df, vars_of_interest = c('claytotal_r', 'silttotal_r', 'sandtotal_r'), varnames = c('clay', 'silt', 'sand'), SOC_content=FALSE, sum_AWC=FALSE) {
   columnames <- paste0(varnames, '_', depth, 'cm')
   print(cbind(vars_of_interest, columnames)) #show that it's all lined up
   assign("depth", depth, envir = .GlobalEnv) #this necessary because slice can't find the variable otherwise
@@ -82,140 +90,170 @@ MUAggregate_wrapper <- function(df1, varnames) {
   as.data.frame(cbind(mukey=as.integer(row.names(x)), x))
 }
 
-#read in soil data
-ca_mapunits <- shapefile(file.path(ssurgoDir, 'ca_mapunits', 'ca_mapunits.shp'))
+#read in soil data, provided by Mike W. on 4/19/22
+list.files(ssurgoDir)
+ca_mapunits <- shapefile(file.path(SSURGOdir, 'farmland_mapunits_2022_uncut.shp'))
+crs(ca_mapunits) #+proj=aea +lat_0=0 +lon_0=-120 +lat_1=34 +lat_2=40.5 +x_0=0 +y_0=-4000000 +datum=NAD83 +units=m +no_defs
 ca_mapunits$area_ha <- area(ca_mapunits) / 10000
+sum(ca_mapunits$area_ha) #19,836,339
 sum(ca_mapunits$area_ha < 0.001) #only 23 less than 0.01 ha; 15 less than 0.001 ha
-# crs(ca_mapunits)
+ca_mapunits$mu_id <- 1:length(ca_mapunits)
 
+#read-in soil horizon texture data
+farmland_texture <- read.csv(file.path(ssurgoDir, 'farmland_texture_data.csv'), stringsAsFactors = FALSE, na.strings = c('', ' '))
 
+#add cimis cell numbers to map units
+#export unique raster cell numbers of interest
+#used spatialCIMIS_traffic.R to extract daily ET from these cells and export to consolidated csv
+centroids_mu <- gCentroid(ca_mapunits, byid = TRUE)
+centroids_mu_df <- SpatialPointsDataFrame(centroids_mu, data.frame(ca_mapunits))
+sum(centroids_mu_df$area_ha)
+length(unique(ca_mapunits$mukey)) #8847
+spatialCIMIS <- raster(file.path(CIMISrawDir, 'ETo', '2009', 'ETo20090115.tif'))
+as.character(crs(spatialCIMIS)) == as.character(crs(ca_mapunits))
+CIMIScellnumbers <- as.integer(cellFromXY(object=spatialCIMIS, xy=centroids_mu_df))
+length(CIMIScellnumbers)
+length(unique(CIMIScellnumbers)) #44,604 CIMIS cells need sampling
+CIMIScellunique_df <- data.frame(CIMIS_cells=unique(CIMIScellnumbers))
+# write.csv(CIMIScellunique_df, file.path(trafficDir, 'CIMIS', 'CIMIS_cells_unique.csv'), row.names = FALSE) #have not updated this file yet
 
-#read in shapefile created in ArcGIS from sagbi x ca mapunit intersection
-list.files(file.path(trafficDir, 'shapefiles'))
-mu_sagbi <- shapefile(file.path(trafficDir, 'shapefiles', 'mu_sagbi.shp'))
-2.47105 * sum(area(mu_sagbi) / 10000)
-mu_sagbi #188319 features
-mu_sagbi$area_ha <- area(mu_sagbi) / 10000
-sum(mu_sagbi$area_ha) * 2.47105 #18101851 acres
-sum(mu_sagbi$area_ha < 0.001) #4106 features < 0.01 ha; 1103 features < 0.01 ha
+#add CIMIS_cells_unique
+centroids_mu_df$CIMIScell <- cellFromXY(object=spatialCIMIS, xy=centroids_mu_df)
+length(unique(centroids_mu_df$CIMIScell)) #44604
+shapefile(centroids_mu_df, file.path(ssurgoDir, 'intermediate files', 'mu_centroids_cimis.shp'), overwrite=TRUE)
+ca_mapunits$CIMIScell <- centroids_mu_df$CIMIScell[match(ca_mapunits$mu_id, centroids_mu_df$mu_id)]
+# shapefile(ca_mapunits, file.path(ssurgoDir, 'intermediate files', 'mu_cimis_ref.shp')) #delete this now?
 
-# shapefile(mu_sagbi, file.path(trafficDir, 'shapefiles', 'mu_sagbi.shp'), overwrite=TRUE)
-
-#crop ca_mapunits with sagbiMod
-# ca_mapunits_ca_ta_cropped <- crop(ca_mapunits_ca_ta, sagbiMod_dissolved) #had problems running
-# ca_mapunits_ca_ta_SAGBI <- gIntersection(ca_mapunits_ca_ta, sagbiMod_dissolved, drop_lower_td=TRUE) #also failed
-
-#read in mu data
-ca_mu_data <- read.csv(file.path(ssurgoDir, 'ca_mapunit_data.csv'), stringsAsFactors = FALSE)
-AOI_mu_data <- ca_mu_data[ca_mu_data$mukey %in% mu_sagbi$mukey,]
-
-#read in comp and horizon data and limit to AOI
-comp_data <- read.csv(file.path(ssurgoDir, 'component_data', 'ca_component_data.csv'), stringsAsFactors = FALSE, na.strings = c('', ' '))
+#extract comp data from horizon data file provided by Mike W. on 4/19/22
+colnames(farmland_texture)
+comp_data <- data.frame(cokey=unique(farmland_texture$cokey))
+comp_data$mukey <- farmland_texture$mukey[match(comp_data$cokey, farmland_texture$cokey)]
+comp_data$compname <- farmland_texture$compname[match(comp_data$cokey, farmland_texture$cokey)]
+comp_data$comppct_r <- farmland_texture$comppct_r[match(comp_data$cokey, farmland_texture$cokey)]
 dim(comp_data)
-comp_data_AOI <- comp_data[comp_data$mukey %in% mu_sagbi$mukey,]
-dim(comp_data_AOI)
-length(unique(comp_data_AOI$mukey)) #8781 unique mukeys
-if(sum(is.na(comp_data_AOI$majcompflag)) > 0) {stop(print('there are NAs in majcomp column!'))}
+head(comp_data)
+length(unique(comp_data$mukey)) #8846
+length(unique(ca_mapunits$mukey)) #8847
+comp_data_AOI <- comp_data #because it's the same
+rm(comp_data)
+# if(sum(is.na(comp_data_AOI$majcompflag)) > 0) {stop(print('there are NAs in majcomp column!'))}
 if(sum(is.na(comp_data_AOI$comppct_r)) > 0) {stop(print('there are NAs in the comppct column!'))}
-sum(is.na(comp_data_AOI$comppct_r)) #3
-comp_data_AOI <- comp_data_AOI[!is.na(comp_data_AOI$comppct_r),]
-dim(comp_data_AOI) #41173 rows
-length(unique(comp_data_AOI$mukey)) #8781 map units match above
-length(unique(comp_data_AOI$cokey)) #41173 unique components
-length(unique(comp_data_AOI$compname)) #2026 unique component names
-summary(comp_data_AOI$comppct_r[comp_data_AOI$majcompflag=='Yes'])
-sum(comp_data_AOI$comppct_r[comp_data_AOI$majcompflag=='Yes'] < 15) #18 instance of <15% comppct_r flagged as majcomps
-comp_data_AOI[comp_data_AOI$majcompflag=='Yes' & comp_data_AOI$comppct_r < 15,]
-sum(comp_data_AOI$comppct_r[comp_data_AOI$majcompflag=='No '] >= 15) #110 not flagged as majcomp in these valleys with > 15%
-comp_data_AOI[comp_data_AOI$majcompflag=='No ' & comp_data_AOI$comppct_r>=15, ]
-sum(comp_data_AOI$majcompflag=='No ' & comp_data_AOI$comppct_r>=15 & !is.na(comp_data_AOI$castorieindex)) #12 instances
+sum(is.na(comp_data_AOI$comppct_r)) #0
+# comp_data_AOI <- comp_data_AOI[!is.na(comp_data_AOI$comppct_r),]
+length(unique(comp_data_AOI$compname)) #2014 unique component names
+# summary(comp_data_AOI$comppct_r[comp_data_AOI$majcompflag=='Yes'])
+# sum(comp_data_AOI$comppct_r[comp_data_AOI$majcompflag=='Yes'] < 15) #18 instance of <15% comppct_r flagged as majcomps
+# comp_data_AOI[comp_data_AOI$majcompflag=='Yes' & comp_data_AOI$comppct_r < 15,]
+# sum(comp_data_AOI$comppct_r[comp_data_AOI$majcompflag=='No '] >= 15) #110 not flagged as majcomp in these valleys with > 15%
+# comp_data_AOI[comp_data_AOI$majcompflag=='No ' & comp_data_AOI$comppct_r>=15, ]
+# sum(comp_data_AOI$majcompflag=='No ' & comp_data_AOI$comppct_r>=15 & !is.na(comp_data_AOI$castorieindex)) #12 instances
 
 #check length of each cokey
 cokey_lengths <- unlist(lapply(strsplit(as.character(comp_data_AOI$cokey[1:2]), ""), length))
 summary(cokey_lengths) #all 8 so slice won't create problems later
 rm(cokey_lengths)
 
-#fix a few majcompflag errors
-comp_data_AOI$majcompflag[comp_data_AOI$majcompflag=='No ' & comp_data_AOI$comppct_r>=15] <- 'Yes'
-comp_data_AOI$majcompflag[comp_data_AOI$majcompflag=='Yes' & comp_data_AOI$comppct_r < 15] <- 'No '
+#define majcompflag
+comp_data_AOI$majcompflag[comp_data_AOI$comppct_r>=15] <- 'Yes'
+comp_data_AOI$majcompflag[comp_data_AOI$comppct_r < 15] <- 'No '
 
+#aggregate horizon data to a 0-10 cm summary to define map unit and major component textural classes
+colnames(farmland_texture)
+horizon_data_AOI <- farmland_texture[,c(1:2,5:10)]
 
-
-#aggregate horizon data to a 0-10 cm summary to map textural classes
-horizon_data <- read.csv(file.path(ssurgoDir, 'ca_horizon_data.csv'), stringsAsFactors = FALSE)
-horizon_data_AOI <- horizon_data[horizon_data$cokey %in% comp_data_AOI$cokey, ]
-#horizon fixes identified as necessary
-horizon_data_AOI[horizon_data_AOI$cokey==16387801,]
-horizon_data_AOI[horizon_data_AOI$cokey==16387801 & horizon_data_AOI$hzname=='Ck','hzdept_r'] <- 114 #to fix horizonation to something acceptable
-horizon_data_AOI[horizon_data_AOI$cokey==16597708, ] #same issue as above
-horizon_data_AOI[horizon_data_AOI$cokey==16597708 & horizon_data_AOI$hzname=='Ck','hzdept_r'] <- 114
-horizon_data_AOI$mukey <- comp_data_AOI$mukey[match(horizon_data_AOI$cokey, comp_data_AOI$cokey)]
+#horizon fixes identified as necessary below are applied now above
 horizon_data_AOI$majcompflag <- comp_data_AOI$majcompflag[match(horizon_data_AOI$cokey, comp_data_AOI$cokey)]
-#convert to Soil Profile collection class with no minor comps per filtering above
+table(horizon_data_AOI$majcompflag)
+#convert to Soil Profile collection class with no minor comps per filtering below
 horizon_AOI_majcomps <- horizon_data_AOI[horizon_data_AOI$majcompflag=='Yes', ]
+# horizon_AOI_majcomps <- horizon_AOI_majcomps[!is.na(horizon_AOI_majcomps$hzname),] #removing these empty rows associated with non-soil major components eliminates error associated with "missing depths"; but these are kept to maintain full mukey representation in comp level table
 depths(horizon_AOI_majcomps) <- cokey ~ hzdept_r + hzdepb_r
 class(horizon_AOI_majcomps)
 print(horizon_AOI_majcomps)
+depth_ck <- checkHzDepthLogic(horizon_AOI_majcomps)
+lapply(depth_ck, summary) #760 missing depth
+all(depth_ck$valid) #not all good
+horizon_data_AOI[horizon_data_AOI$cokey==depth_ck$cokey[depth_ck$overlapOrGap==TRUE],] #error is below 10 cm, so can ignore
+rm(depth_ck)
+
 comp_AOI_10cm <- horizon_to_comp(horizon_SPC = horizon_AOI_majcomps, depth = 10, comp_df = comp_data_AOI)
 
 comp_AOI_10cm$textural_class <- textural.class.calc(sand=comp_AOI_10cm$sand_10cm, silt = comp_AOI_10cm$silt_10cm, clay = comp_AOI_10cm$clay_10cm)
 unique(comp_AOI_10cm$textural_class)
 table(comp_AOI_10cm$textural_class)
-write.csv(comp_AOI_10cm, file.path(trafficDir, 'ssurgo_intermediates', 'comp_AOI_10cm_2.9.21.csv'), row.names = FALSE)
+sum(is.na(comp_AOI_10cm$textural_class)) #1344 are NA
+unique(comp_AOI_10cm$compname[is.na(comp_AOI_10cm$textural_class)])
+write.csv(comp_AOI_10cm, file.path(SSURGOdir, 'intermediate files', 'comp_AOI_10cm_4.20.22.csv'), row.names = FALSE) #look at removing NA to create table
 
-comp_AOI_10cm <- read.csv(file.path(trafficDir, 'ssurgo_intermediates', 'comp_AOI_10cm_2.9.21.csv'))
 colnames(comp_AOI_10cm)
-length(unique(comp_AOI_10cm$mukey[!is.na(comp_AOI_10cm$clay_10cm)]))#8363 unique mukeys with components having at least texture data
-length(unique(comp_AOI_10cm$cokey[!is.na(comp_AOI_10cm$clay_10cm)])) #10224
+length(unique(comp_AOI_10cm$mukey[!is.na(comp_AOI_10cm$clay_10cm)]))#8430 unique mukeys with components having at least texture data
+length(unique(comp_AOI_10cm$cokey[!is.na(comp_AOI_10cm$clay_10cm)])) #10321 components
+length(unique(comp_AOI_10cm$mukey[!is.na(comp_AOI_10cm$textural_class)])) #8406 mukeys with components having a textural class determination
 
 
 #add metadata and restrictive layer info to shapefile
 #clay
 compnames_by_mukey <- data.frame(mukey=row.names(tapply(comp_data_AOI$compname, comp_data_AOI$mukey, function(x) unique(x))), compnames = as.character(tapply(comp_data_AOI$compname, comp_data_AOI$mukey, concat_names)), stringsAsFactors = FALSE)
-length(unique(compnames_by_mukey$compnames))
+length(unique(compnames_by_mukey$compnames)) #5284
 
 majcompnames_by_mukey <- data.frame(mukey=row.names(tapply(comp_data_AOI$compname[comp_data_AOI$majcompflag=='Yes'], comp_data_AOI$mukey[comp_data_AOI$majcompflag=='Yes'], concat_names)), majcompnames=as.character(tapply(comp_data_AOI$compname[comp_data_AOI$majcompflag=='Yes'], comp_data_AOI$mukey[comp_data_AOI$majcompflag=='Yes'], concat_names)), stringsAsFactors = FALSE)
-length(unique(majcompnames_by_mukey$majcompnames)) #2330 unique major component name combos
+length(unique(majcompnames_by_mukey$majcompnames)) #2328 unique major component name combos
 
 comppct_by_mukey_clay_data <- data.frame(mukey=row.names(tapply(comp_AOI_10cm$comppct[!is.na(comp_AOI_10cm$clay_10cm)], comp_AOI_10cm$mukey[!is.na(comp_AOI_10cm$clay_10cm)], sum)), comppct_tot=as.numeric(tapply(comp_AOI_10cm$comppct[!is.na(comp_AOI_10cm$clay_10cm)], comp_AOI_10cm$mukey[!is.na(comp_AOI_10cm$clay_10cm)], sum)), stringsAsFactors = FALSE)
-head(comppct_by_mukey_clay_data)
 summary(comppct_by_mukey_clay_data$comppct_tot)
-sum(comppct_by_mukey_clay_data$comppct_tot < 70) #574
+sum(comppct_by_mukey_clay_data$comppct_tot < 70) #564 mukeys have less than 70% area with clay data
 
-mu_sagbi$muname <- AOI_mu_data$muname[match(mu_sagbi$mukey, AOI_mu_data$mukey)]
-mu_sagbi$mjcmpnms <- majcompnames_by_mukey$majcompnames[match(mu_sagbi$mukey, majcompnames_by_mukey$mukey)]
-mu_sagbi$complex <- ifelse(grepl('complex', mu_sagbi$muname), 'Yes', 'No')
-table(mu_sagbi$complex)
-mu_sagbi$associan <- ifelse(grepl('association', mu_sagbi$muname), 'Yes', 'No') #272 yes
-table(mu_sagbi$associan)
-mu_sagbi$dmcmp_pct <- domcomp_pct_by_mukey$docomppct[match(mu_sagbi$mukey, domcomp_pct_by_mukey$mukey)]
-summary(mu_sagbi$dmcmp_pct)
-mu_sagbi$mjcmp_pct <- majcomp_pct_by_mukey$majcomppct[match(mu_sagbi$mukey, majcomp_pct_by_mukey$mukey)]
-summary(mu_sagbi$mjcmp_pct) #114 NAs
-mu_sagbi$compct_clay <- comppct_by_mukey_clay_data$comppct_tot[match(mu_sagbi$mukey, comppct_by_mukey_clay_data$mukey)]
+comppct_by_mukey_textural_data <- data.frame(mukey=row.names(tapply(comp_AOI_10cm$comppct[!is.na(comp_AOI_10cm$textural_class)], comp_AOI_10cm$mukey[!is.na(comp_AOI_10cm$textural_class)], sum)), comppct_tot=as.numeric(tapply(comp_AOI_10cm$comppct[!is.na(comp_AOI_10cm$textural_class)], comp_AOI_10cm$mukey[!is.na(comp_AOI_10cm$textural_class)], sum)), stringsAsFactors = FALSE)
+summary(comppct_by_mukey_textural_data$comppct_tot)
+
+domcomp_pct_by_mukey <- data.frame(mukey=row.names(tapply(comp_data_AOI$comppct_r, comp_data_AOI$mukey, function(x) max(x, na.rm=TRUE))), docomppct=as.numeric(tapply(comp_data_AOI$comppct_r, comp_data_AOI$mukey, function(x) max(x, na.rm=TRUE))), stringsAsFactors = FALSE)
+summary(domcomp_pct_by_mukey$docomppct)
+
+majcomp_pct_by_mukey <- data.frame(mukey=row.names(tapply(comp_data_AOI$comppct_r[comp_data_AOI$majcompflag=='Yes'], comp_data_AOI$mukey[comp_data_AOI$majcompflag=='Yes'], function(x) sum(x))), majcomppct=as.numeric(tapply(comp_data_AOI$comppct_r[comp_data_AOI$majcompflag=='Yes'], comp_data_AOI$mukey[comp_data_AOI$majcompflag=='Yes'], function(x) sum(x))), stringsAsFactors = FALSE)
+summary(majcomp_pct_by_mukey$majcomppct)
+
+majcomps_no_by_mukey <- data.frame(mukey=row.names(tapply(comp_data_AOI$majcompflag, comp_data_AOI$mukey, function(x) sum(x=='Yes'))), majcomp_no = as.numeric(tapply(comp_data_AOI$majcompflag, comp_data_AOI$mukey, function(x) sum(x=='Yes'))), stringsAsFactors = FALSE)
+unique(majcomps_no_by_mukey$majcomp_no)
+sum(majcomps_no_by_mukey$majcomp_no==0) #2
+table(majcomps_no_by_mukey$majcomp_no)
+
+#now add this summary info
+ca_mapunits$mjcps_no <- majcomps_no_by_mukey$majcomp_no[match(ca_mapunits$mukey, majcomps_no_by_mukey$mukey)]
+ca_mapunits$mjcmpnms <- majcompnames_by_mukey$majcompnames[match(ca_mapunits$mukey, majcompnames_by_mukey$mukey)]
+ca_mapunits$dmcmp_pct <- domcomp_pct_by_mukey$docomppct[match(ca_mapunits$mukey, domcomp_pct_by_mukey$mukey)]
+summary(ca_mapunits$dmcmp_pct)
+ca_mapunits$mjcmp_pct <- majcomp_pct_by_mukey$majcomppct[match(ca_mapunits$mukey, majcomp_pct_by_mukey$mukey)]
+summary(ca_mapunits$mjcmp_pct) #2 NAs
+ca_mapunits$compct_clay <- comppct_by_mukey_clay_data$comppct_tot[match(ca_mapunits$mukey, comppct_by_mukey_clay_data$mukey)]
+summary(ca_mapunits$compct_clay) #26785 are NA
+ca_mapunits$compct_tex <- comppct_by_mukey_textural_data$comppct_tot[match(ca_mapunits$mukey, comppct_by_mukey_textural_data$mukey)]
+summary(ca_mapunits$compct_tex)
+
 
 colnames(comp_AOI_10cm)
-colnames(comp_AOI_10cm)[5:21]
-AOI_10cm_muagg <- MUAggregate_wrapper(df1=comp_AOI_10cm, varnames = colnames(comp_AOI_10cm)[5:21])
+colnames(comp_AOI_10cm)[5:7]
+AOI_10cm_muagg <- MUAggregate_wrapper(df1=comp_AOI_10cm, varnames = colnames(comp_AOI_10cm)[5:7])
 AOI_10cm_muagg$textural_class <- textural.class.calc(sand = AOI_10cm_muagg$sand_10cm, silt = AOI_10cm_muagg$silt_10cm, clay = AOI_10cm_muagg$clay_10cm)
 table(AOI_10cm_muagg$textural_class)
-write.csv(AOI_10cm_muagg, file.path(trafficDir, 'ssurgo_intermediates', 'AOI_10cm_muagg.csv'), row.names = FALSE)
+write.csv(AOI_10cm_muagg, file.path(SSURGOdir, 'intermediate files', 'AOI_10cm_muagg.csv'), row.names = FALSE)
 colnames(AOI_10cm_muagg)
-AOI_10cm_muagg <- read.csv(file.path(trafficDir, 'ssurgo_intermediates', 'AOI_10cm_muagg.csv'))
-length(unique(AOI_10cm_muagg$mukey)) #8560 unique mukeys
+length(unique(AOI_10cm_muagg$mukey)) #8846 unique mukeys
 
-mu_sagbi_10cm <- merge(mu_sagbi, AOI_10cm_muagg, by = 'mukey')
-names(mu_sagbi_10cm)
-shapefile(mu_sagbi_10cm, file.path(trafficDir, 'shapefiles', 'mu_sagbi_10cm.shp'), overwrite=TRUE)
+ca_mapunits_10cm <- merge(ca_mapunits, AOI_10cm_muagg, by = 'mukey')
+names(ca_mapunits_10cm)
+ca_mapunits_10cm$mu_id <- NULL
+shapefile(ca_mapunits_10cm, file.path(SSURGOdir, 'intermediate files', 'ca_mapunits_10cm.shp'), overwrite=TRUE)
+sum(ca_mapunits_10cm$area_ha[!is.na(ca_mapunits_10cm$textural_class)]) #16419897
+sum(ca_mapunits_10cm$area_ha) #19836339
 
 #acres by textural class
-textural_class_area <- tapply(mu_sagbi_10cm$area_ha, mu_sagbi_10cm$textural_class, sum)
-write.csv(textural_class_area, file.path(trafficDir, 'tables', 'texture_area_sagbi.csv'), row.names = TRUE)
+textural_class_area <- tapply(ca_mapunits_10cm$area_ha, ca_mapunits_10cm$textural_class, sum)
+write.csv(textural_class_area, file.path(SSURGOdir, 'tables', 'texture_area.csv'), row.names = TRUE)
 
 #export unique cimis_cell x textural class combos
-mu_sagbi_10cm$climsoil_code <- paste0(mu_sagbi_10cm$CIMIScell, '_', mu_sagbi_10cm$textural_class)
-climsoil_codes <- unique(mu_sagbi_10cm$climsoil_code)
-length(climsoil_codes)
+ca_mapunits_10cm$climsoil_code <- paste0(ca_mapunits_10cm$CIMIScell, '_', ca_mapunits_10cm$textural_class)
+climsoil_codes <- unique(ca_mapunits_10cm$climsoil_code)
+length(climsoil_codes) #105092
 climsoil_df <- data.frame(code=climsoil_codes, CIMIS=NA, textural_class=NA, stringsAsFactors = FALSE)
 climsoil_df$CIMIS <- as.integer(sapply(climsoil_df$code, function(x) unlist(strsplit(x, '_'))[1]))
 climsoil_df$textural_class <- sapply(climsoil_df$code, function(x) unlist(strsplit(x, '_'))[2])
@@ -223,5 +261,12 @@ unique(climsoil_df$textural_class)
 table(climsoil_df$textural_class)
 table(climsoil_df$textural_class[!climsoil_df$textural_class %in% c('proportions do not sum to 100+- 1', 'sandy clay', 'silt', 'NA')])
 climsoil_df <- climsoil_df[!climsoil_df$textural_class %in% c('proportions do not sum to 100+- 1', 'sandy clay', 'silt', 'NA'), ]
-dim(climsoil_df) #53709 to calc
-write.csv(climsoil_df, file.path(trafficDir, 'climate_soil', 'climsoil_unique.csv'), row.names = FALSE)
+dim(climsoil_df) #90523 to calc
+write.csv(climsoil_df, file.path(SSURGOdir, 'tables', 'climsoil_unique.csv'), row.names = FALSE)
+
+#export comp level data (version already written to intermediate files above)
+dim(comp_AOI_10cm)
+class(comp_AOI_10cm)
+length(unique(comp_AOI_10cm$mukey))#8846
+length(unique(ca_mapunits_10cm$mukey)) #8847
+# write.csv(comp_AOI_10cm, file.path(SSURGOdir, 'tables', 'comp_data_10cm.csv'), row.names = FALSE)
