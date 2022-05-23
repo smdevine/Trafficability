@@ -92,12 +92,14 @@ MUAggregate_wrapper <- function(df1, varnames) {
 
 #read in soil data, provided by Mike W. on 4/19/22
 list.files(ssurgoDir)
-ca_mapunits <- shapefile(file.path(SSURGOdir, 'farmland_mapunits_2022_uncut.shp'))
+ca_mapunits <- shapefile(file.path(SSURGOdir, 'farmland_mapunits_2022.shp'))
 crs(ca_mapunits) #+proj=aea +lat_0=0 +lon_0=-120 +lat_1=34 +lat_2=40.5 +x_0=0 +y_0=-4000000 +datum=NAD83 +units=m +no_defs
 ca_mapunits$area_ha <- area(ca_mapunits) / 10000
-sum(ca_mapunits$area_ha) #19,836,339
-sum(ca_mapunits$area_ha < 0.001) #only 23 less than 0.01 ha; 15 less than 0.001 ha
-ca_mapunits$mu_id <- 1:length(ca_mapunits)
+sum(ca_mapunits$area_ha) #7,334,505
+sum(ca_mapunits$area_ha < 0.001) #57,426
+names(ca_mapunits)
+# ca_mapunits$mu_id <- 1:length(ca_mapunits)
+# plot(ca_mapunits)
 
 #read-in soil horizon texture data
 farmland_texture <- read.csv(file.path(ssurgoDir, 'farmland_texture_data.csv'), stringsAsFactors = FALSE, na.strings = c('', ' '))
@@ -113,16 +115,16 @@ spatialCIMIS <- raster(file.path(CIMISrawDir, 'ETo', '2009', 'ETo20090115.tif'))
 as.character(crs(spatialCIMIS)) == as.character(crs(ca_mapunits))
 CIMIScellnumbers <- as.integer(cellFromXY(object=spatialCIMIS, xy=centroids_mu_df))
 length(CIMIScellnumbers)
-length(unique(CIMIScellnumbers)) #44,604 CIMIS cells need sampling
+length(unique(CIMIScellnumbers)) #25,478 CIMIS cells need sampling
 CIMIScellunique_df <- data.frame(CIMIS_cells=unique(CIMIScellnumbers))
-# write.csv(CIMIScellunique_df, file.path(trafficDir, 'CIMIS', 'CIMIS_cells_unique.csv'), row.names = FALSE) #have not updated this file yet
+write.csv(CIMIScellunique_df, file.path(trafficDir, 'CIMIS', 'CIMIS_cells_unique_5.20.22.csv'), row.names = FALSE)
 
 #add CIMIS_cells_unique
 centroids_mu_df$CIMIScell <- cellFromXY(object=spatialCIMIS, xy=centroids_mu_df)
-length(unique(centroids_mu_df$CIMIScell)) #44604
+length(unique(centroids_mu_df$CIMIScell)) #25478
 shapefile(centroids_mu_df, file.path(ssurgoDir, 'intermediate files', 'mu_centroids_cimis.shp'), overwrite=TRUE)
-ca_mapunits$CIMIScell <- centroids_mu_df$CIMIScell[match(ca_mapunits$mu_id, centroids_mu_df$mu_id)]
-# shapefile(ca_mapunits, file.path(ssurgoDir, 'intermediate files', 'mu_cimis_ref.shp')) #delete this now?
+ca_mapunits$CIMIScell <- centroids_mu_df$CIMIScell[match(ca_mapunits$id, centroids_mu_df$id)]
+# shapefile(ca_mapunits, file.path(ssurgoDir, 'intermediate files', 'mu_cimis_ref.shp')) #not necessary
 
 #extract comp data from horizon data file provided by Mike W. on 4/19/22
 colnames(farmland_texture)
@@ -134,8 +136,8 @@ dim(comp_data)
 head(comp_data)
 length(unique(comp_data$mukey)) #8846
 length(unique(ca_mapunits$mukey)) #8847
-comp_data_AOI <- comp_data #because it's the same
-rm(comp_data)
+comp_data_AOI <- comp_data
+# rm(comp_data)
 # if(sum(is.na(comp_data_AOI$majcompflag)) > 0) {stop(print('there are NAs in majcomp column!'))}
 if(sum(is.na(comp_data_AOI$comppct_r)) > 0) {stop(print('there are NAs in the comppct column!'))}
 sum(is.na(comp_data_AOI$comppct_r)) #0
@@ -172,8 +174,9 @@ class(horizon_AOI_majcomps)
 print(horizon_AOI_majcomps)
 depth_ck <- checkHzDepthLogic(horizon_AOI_majcomps)
 lapply(depth_ck, summary) #760 missing depth
+lapply(depth_ck, table)
 all(depth_ck$valid) #not all good
-horizon_data_AOI[horizon_data_AOI$cokey==depth_ck$cokey[depth_ck$overlapOrGap==TRUE],] #error is below 10 cm, so can ignore
+horizon_data_AOI[horizon_data_AOI$cokey==depth_ck$cokey[depth_ck$overlapOrGap==TRUE],] #this one error is below 10 cm, so can ignore
 rm(depth_ck)
 
 comp_AOI_10cm <- horizon_to_comp(horizon_SPC = horizon_AOI_majcomps, depth = 10, comp_df = comp_data_AOI)
@@ -183,7 +186,7 @@ unique(comp_AOI_10cm$textural_class)
 table(comp_AOI_10cm$textural_class)
 sum(is.na(comp_AOI_10cm$textural_class)) #1344 are NA
 unique(comp_AOI_10cm$compname[is.na(comp_AOI_10cm$textural_class)])
-write.csv(comp_AOI_10cm, file.path(SSURGOdir, 'intermediate files', 'comp_AOI_10cm_4.20.22.csv'), row.names = FALSE) #look at removing NA to create table
+write.csv(comp_AOI_10cm, file.path(SSURGOdir, 'intermediate files', 'comp_AOI_10cm_5.20.22.csv'), row.names = FALSE) #look at removing NA to create table
 
 colnames(comp_AOI_10cm)
 length(unique(comp_AOI_10cm$mukey[!is.na(comp_AOI_10cm$clay_10cm)]))#8430 unique mukeys with components having at least texture data
@@ -225,35 +228,35 @@ summary(ca_mapunits$dmcmp_pct)
 ca_mapunits$mjcmp_pct <- majcomp_pct_by_mukey$majcomppct[match(ca_mapunits$mukey, majcomp_pct_by_mukey$mukey)]
 summary(ca_mapunits$mjcmp_pct) #2 NAs
 ca_mapunits$compct_clay <- comppct_by_mukey_clay_data$comppct_tot[match(ca_mapunits$mukey, comppct_by_mukey_clay_data$mukey)]
-summary(ca_mapunits$compct_clay) #26785 are NA
+summary(ca_mapunits$compct_clay) #25696 are NA
 ca_mapunits$compct_tex <- comppct_by_mukey_textural_data$comppct_tot[match(ca_mapunits$mukey, comppct_by_mukey_textural_data$mukey)]
-summary(ca_mapunits$compct_tex)
-
+summary(ca_mapunits$compct_tex) #26468
 
 colnames(comp_AOI_10cm)
 colnames(comp_AOI_10cm)[5:7]
 AOI_10cm_muagg <- MUAggregate_wrapper(df1=comp_AOI_10cm, varnames = colnames(comp_AOI_10cm)[5:7])
 AOI_10cm_muagg$textural_class <- textural.class.calc(sand = AOI_10cm_muagg$sand_10cm, silt = AOI_10cm_muagg$silt_10cm, clay = AOI_10cm_muagg$clay_10cm)
 table(AOI_10cm_muagg$textural_class)
-write.csv(AOI_10cm_muagg, file.path(SSURGOdir, 'intermediate files', 'AOI_10cm_muagg.csv'), row.names = FALSE)
+write.csv(AOI_10cm_muagg, file.path(SSURGOdir, 'intermediate files', 'AOI_10cm_muagg_5.20.22.csv'), row.names = FALSE)
 colnames(AOI_10cm_muagg)
 length(unique(AOI_10cm_muagg$mukey)) #8846 unique mukeys
 
 ca_mapunits_10cm <- merge(ca_mapunits, AOI_10cm_muagg, by = 'mukey')
 names(ca_mapunits_10cm)
-ca_mapunits_10cm$mu_id <- NULL
-shapefile(ca_mapunits_10cm, file.path(SSURGOdir, 'intermediate files', 'ca_mapunits_10cm.shp'), overwrite=TRUE)
-sum(ca_mapunits_10cm$area_ha[!is.na(ca_mapunits_10cm$textural_class)]) #16419897
-sum(ca_mapunits_10cm$area_ha) #19836339
+sum(ca_mapunits_10cm$area_ha[!is.na(ca_mapunits_10cm$textural_class)]) #7116062
+sum(ca_mapunits_10cm$area_ha) #7334505
+7116062/7334505 #97% coverage
 
 #acres by textural class
 textural_class_area <- tapply(ca_mapunits_10cm$area_ha, ca_mapunits_10cm$textural_class, sum)
-write.csv(textural_class_area, file.path(SSURGOdir, 'tables', 'texture_area.csv'), row.names = TRUE)
+write.csv(textural_class_area, file.path(SSURGOdir, 'tables', 'texture_area.5.20.22.csv'), row.names = TRUE)
 
 #export unique cimis_cell x textural class combos
 ca_mapunits_10cm$climsoil_code <- paste0(ca_mapunits_10cm$CIMIScell, '_', ca_mapunits_10cm$textural_class)
+shapefile(ca_mapunits_10cm, file.path(SSURGOdir, 'intermediate files', 'ca_mapunits_10cm.shp'), overwrite=TRUE)
+
 climsoil_codes <- unique(ca_mapunits_10cm$climsoil_code)
-length(climsoil_codes) #105092
+length(climsoil_codes) #65630
 climsoil_df <- data.frame(code=climsoil_codes, CIMIS=NA, textural_class=NA, stringsAsFactors = FALSE)
 climsoil_df$CIMIS <- as.integer(sapply(climsoil_df$code, function(x) unlist(strsplit(x, '_'))[1]))
 climsoil_df$textural_class <- sapply(climsoil_df$code, function(x) unlist(strsplit(x, '_'))[2])
@@ -261,12 +264,5 @@ unique(climsoil_df$textural_class)
 table(climsoil_df$textural_class)
 table(climsoil_df$textural_class[!climsoil_df$textural_class %in% c('proportions do not sum to 100+- 1', 'sandy clay', 'silt', 'NA')])
 climsoil_df <- climsoil_df[!climsoil_df$textural_class %in% c('proportions do not sum to 100+- 1', 'sandy clay', 'silt', 'NA'), ]
-dim(climsoil_df) #90523 to calc
-write.csv(climsoil_df, file.path(SSURGOdir, 'tables', 'climsoil_unique.csv'), row.names = FALSE)
-
-#export comp level data (version already written to intermediate files above)
-dim(comp_AOI_10cm)
-class(comp_AOI_10cm)
-length(unique(comp_AOI_10cm$mukey))#8846
-length(unique(ca_mapunits_10cm$mukey)) #8847
-# write.csv(comp_AOI_10cm, file.path(SSURGOdir, 'tables', 'comp_data_10cm.csv'), row.names = FALSE)
+dim(climsoil_df) #57804 to calc
+write.csv(climsoil_df, file.path(SSURGOdir, 'tables', 'climsoil_unique_5.20.22.csv'), row.names = FALSE)
