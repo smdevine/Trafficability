@@ -4,11 +4,18 @@ trafficDir <- file.path(mainDir, 'trafficability')
 cellsofinterestDir <- file.path(trafficDir, 'CIMIS')
 medianDailyETo <- read.csv(file.path(cellsofinterestDir, 'SpatialCIMIS.ETo.dailymedian.csv'), stringsAsFactors = FALSE)
 dim(medianDailyETo)
-climsoil_df <- read.csv(file.path(trafficDir, 'climate_soil', 'climsoil_unique.csv'), stringsAsFactors = FALSE)
-dim(climsoil_df)
+textures_of_interest <- c('sand', 'loamy sand', 'sandy loam', 'silt loam', 'loam', 'sandy clay loam', 'clay loam', 'silty clay loam', 'silty clay', 'clay')
+
+#create new file with every combination of unique CIMIS cells and each of the ten textures of interest, since the old climsoil_df only shows unique combination of CIMIS cell and map-unit aggregated texture estimates
+cellsofinterest <- read.csv(file.path(cellsofinterestDir, "CIMIS_cells_unique_5.20.22.csv"), stringsAsFactors = FALSE)
+climsoil_df <- do.call(rbind, lapply(textures_of_interest, function(x) {cbind(x, cellsofinterest$CIMIS_cells)}))
+climsoil_df <- as.data.frame(climsoil_df)
+colnames(climsoil_df) <- c('texture', 'CIMIS')
+# climsoil_df <- read.csv(file.path(trafficDir, 'climate_soil', 'climsoil_unique.csv'), stringsAsFactors = FALSE)
+# dim(climsoil_df)
 
 cellnames <- paste0('cell_', climsoil_df$CIMIS)
-sum(!cellnames %in% colnames(medianDailyETo)[2:ncol(medianDailyETo)]) #1 not in median daily ETo because that cell had almost no data
+sum(!cellnames %in% colnames(medianDailyETo)[2:ncol(medianDailyETo)]) #10 not in median daily ETo because those cells had almost no data
 climsoil_df <- climsoil_df[cellnames %in% colnames(medianDailyETo)[2:ncol(medianDailyETo)],]
 cellnames <- paste0('cell_', climsoil_df$CIMIS)
 sum(!cellnames %in% colnames(medianDailyETo)[2:ncol(medianDailyETo)]) #0 is good
